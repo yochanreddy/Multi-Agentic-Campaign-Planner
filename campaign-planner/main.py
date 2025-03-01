@@ -6,9 +6,6 @@ from graph import CampaignPlanner
 from langgraph.checkpoint.memory import MemorySaver
 import uuid
 
-# Load environment variables from .env file
-
-
 logger = get_module_logger()
 
 

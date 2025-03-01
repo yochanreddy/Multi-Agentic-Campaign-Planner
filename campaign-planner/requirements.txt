@@ -1,0 +1,6 @@
+langchain-chroma==0.2.2
+langchain-openai==0.3.7
+langchain==0.3.19
+langgraph==0.3.2
+python-dotenv==1.0.1
+ruff==0.9.9
