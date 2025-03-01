@@ -27,7 +27,7 @@ class BrandMappingGraph(Graph):
                 retriever.get_retriever(),
                 name="get_industry_types",
                 description="Suggests 5 type of industry based on the brand description by performing a Maximum Marginal Relevance Search on the vectorstore",
-                document_prompt=PromptTemplate.from_template("Industry: {category}"),
+                document_prompt=PromptTemplate.from_template("Industry 1: {category}"),
             )
         ]
 
