@@ -4,7 +4,7 @@ from .input import InputSchema, Input
 from .output import OutputSchema, Output
 from .process import Process
 from .router import Router
-from .state import LocalState
+from state import State
 from langchain_core.tools.retriever import create_retriever_tool
 from utils import Retriever, get_module_logger
 from langgraph.prebuilt import ToolNode
@@ -40,7 +40,7 @@ class BrandIndustryClassifier(Graph):
         tool_node = ToolNode(self.tools)
 
         # Create graph
-        graph = StateGraph(LocalState)
+        graph = StateGraph(State)
 
         # Add nodes
         graph.add_node("input_node", input_node.validate_and_parse)

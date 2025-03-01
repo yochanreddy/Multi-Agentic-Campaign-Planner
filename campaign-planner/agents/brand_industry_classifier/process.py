@@ -1,7 +1,7 @@
 from agents.base import ProcessNode
 from langchain_core.runnables.config import RunnableConfig
 from .output import Output
-from .state import LocalState
+from state import State
 from utils import get_module_logger
 
 logger = get_module_logger()
@@ -22,8 +22,8 @@ class Process(ProcessNode):
         )
         self.agent = self.prompt | self.llm.bind_tools(tools=tools)
 
-    def process(self, state: LocalState, config: RunnableConfig):
-        logger.debug(f"{self.__class__.__name__} start")
+    def process(self, state: State, config: RunnableConfig):
+        logger.debug(f"{config['configurable']['thread_id']} start")
         response = self.agent.invoke(state)
-        logger.debug(f"{self.__class__.__name__} finish")
+        logger.debug(f"{config['configurable']['thread_id']} finish")
         return {"messages": [response]}

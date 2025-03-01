@@ -1,3 +1,4 @@
+from datetime import datetime
 from agents.base import ProcessNode
 from langchain_core.runnables.config import RunnableConfig
 from .output import Output
@@ -24,6 +25,8 @@ class Process(ProcessNode):
 
     def process(self, state: State, config: RunnableConfig):
         logger.debug(f"{config['configurable']['thread_id']} start")
-        response = self.agent.invoke(state)
+        response = self.agent.invoke(
+            state | {"current_date": datetime.today().strftime("%d-%m-%Y")}
+        )
         logger.debug(f"{config['configurable']['thread_id']} finish")
         return {"messages": [response]}

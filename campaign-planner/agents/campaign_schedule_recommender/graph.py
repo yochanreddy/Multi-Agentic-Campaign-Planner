@@ -11,7 +11,7 @@ from langgraph.prebuilt import ToolNode
 logger = get_module_logger()
 
 
-class AudienceSegmentAnalyzer(Graph):
+class CampaignScheduleRecommender(Graph):
     def __init__(self, config):
         super().__init__(config)
         self.tools = []

@@ -1,15 +1,17 @@
-from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Literal
 
-from agents.base import OutputNode
+from agents.base import InputNode
 from langchain_core.runnables.config import RunnableConfig
 from utils import get_module_logger
-from langchain.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
 
 logger = get_module_logger()
 
 
-class OutputSchema(BaseModel):
+class InputSchema(BaseModel):
+    brand_name: str = Field(..., description="Name of Brand")
+    brand_description: str = Field(..., description="Description of Brand")
+    campaign_objective: str = Field(..., description="Objective of the campaign")
     age_group: str = Field(
         ...,
         description="Specific age range of target audience in 'min-max' format (e.g., '18-35', '25-44'). Must be realistic demographic segments.",
@@ -18,6 +20,7 @@ class OutputSchema(BaseModel):
         ...,
         description="Target audience gender identity. Use 'all' for gender-neutral campaigns or when targeting multiple genders.",
     )
+    industry: str = Field(..., description="type of industry")
     interests: List[str] = Field(
         ...,
         description="Key topics, activities, hobbies and subject areas that the target audience actively engages with or shows affinity towards.",
@@ -30,24 +33,23 @@ class OutputSchema(BaseModel):
         ...,
         description="Personality characteristics, values, attitudes, aspirations, and lifestyle choices that define the target audience's decision-making and behavior patterns.",
     )
+    recommended_ad_platforms: List[Literal["Meta", "Google", "LinkedIn", "TikTok"]] = (
+        Field(
+            ...,
+            description="Recommended Digital advertising platforms integrated with the platform where campaigns will run",
+        )
+    )
 
     class Config:
         extra = "allow"
 
 
-class Output(OutputNode):
-    output_parser = PydanticOutputParser(pydantic_object=OutputSchema)
-
-    def __init__(self):
-        super().__init__()
-
-    def format_output(
+class Input(InputNode):
+    def validate_and_parse(
         self, state: Dict[str, Any], config: RunnableConfig
-    ) -> OutputSchema:
-        """Format the output state"""
+    ) -> Dict[str, Any]:
+        """Validate and parse input state"""
         logger.debug(f"{config['configurable']['thread_id']} start")
-
-        last_message = state["messages"][-1]
-        output_data: OutputSchema = self.output_parser.invoke(last_message)
+        input_data = InputSchema.model_validate(state)
         logger.debug(f"{config['configurable']['thread_id']} finish")
-        return output_data.model_dump()
+        return {"input": input_data}

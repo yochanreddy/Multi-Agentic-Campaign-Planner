@@ -10,7 +10,14 @@ logger = get_module_logger()
 
 
 class OutputSchema(BaseModel):
-    industry: str = Field(..., description="Classified Industry Type")
+    campaign_start_date: str = Field(
+        description="Campaign start date in DD-MM-YYYY format",
+        pattern=r"^\d{2}-\d{2}-\d{4}$",
+    )
+    campaign_end_date: str = Field(
+        description="Campaign end date in DD-MM-YYYY format",
+        pattern=r"^\d{2}-\d{2}-\d{4}$",
+    )
 
     class Config:
         extra = "allow"

@@ -27,7 +27,7 @@ class Input(InputNode):
         self, state: Dict[str, Any], config: RunnableConfig
     ) -> Dict[str, Any]:
         """Validate and parse input state"""
-        logger.debug(f"{self.__class__.__name__} start")
+        logger.debug(f"{config['configurable']['thread_id']} start")
         input_data = InputSchema.model_validate(state)
-        logger.debug(f"{self.__class__.__name__} finish")
+        logger.debug(f"{config['configurable']['thread_id']} finish")
         return {"input": input_data}

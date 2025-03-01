@@ -1,3 +1,3 @@
-from .graph import BrandIndustryClassifier
+from .graph import AudienceSegmentAnalyzer
 
-__all__ = ["BrandIndustryClassifier"]
+__all__ = ["AudienceSegmentAnalyzer"]

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Any, Dict
+from typing import Any, Dict, List, Literal
 
 from agents.base import OutputNode
 from langchain_core.runnables.config import RunnableConfig
@@ -10,7 +10,12 @@ logger = get_module_logger()
 
 
 class OutputSchema(BaseModel):
-    industry: str = Field(..., description="Classified Industry Type")
+    recommended_ad_platforms: List[Literal["Meta", "Google", "LinkedIn", "TikTok"]] = (
+        Field(
+            ...,
+            description="Recommended Digital advertising platforms integrated with the platform where campaigns will run",
+        )
+    )
 
     class Config:
         extra = "allow"
