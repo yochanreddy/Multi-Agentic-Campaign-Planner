@@ -21,7 +21,6 @@ class InputSchema(BaseModel):
         ...,
         description="Target audience gender identity. Use 'all' for gender-neutral campaigns or when targeting multiple genders.",
     )
-    industry: str = Field(..., description="type of industry")
     interests: List[str] = Field(
         ...,
         description="Key topics, activities, hobbies and subject areas that the target audience actively engages with or shows affinity towards.",
@@ -34,9 +33,9 @@ class InputSchema(BaseModel):
         ...,
         description="Personality characteristics, values, attitudes, aspirations, and lifestyle choices that define the target audience's decision-making and behavior patterns.",
     )
-    recommended_ad_platforms: List[ChannelType] = Field(
-        ...,
-        description="Recommended Digital advertising platforms integrated with the platform where campaigns will run",
+    campaign_start_date: str = Field(
+        description="Campaign start date in DD-MM-YYYY format",
+        pattern=r"^\d{2}-\d{2}-\d{4}$",
     )
 
     class Config:

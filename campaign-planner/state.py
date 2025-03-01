@@ -47,6 +47,10 @@ class State(MessagesState):
         List[str],
         "Recommended Digital advertising platforms integrated with the platform where campaigns will run",
     ]
+    campaign_name: Annotated[
+        str,
+        "A unique campaign identifier combining brand, timing, audience, and theme elements separated by underscores (e.g., 'BrandName_Season_TargetAudience_Theme'). This name helps in easily identifying and distinguishing marketing campaigns across the platform.",
+    ]
     campaign_start_date: Annotated[
         str,
         "Starting date of the marketing campaign (format: DD-MM-YYYY)",

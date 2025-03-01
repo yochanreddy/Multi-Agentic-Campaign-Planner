@@ -25,8 +25,6 @@ class Process(ProcessNode):
 
     def process(self, state: State, config: RunnableConfig):
         logger.debug(f"{config['configurable']['thread_id']} start")
-        response = self.agent.invoke(
-            state | {"current_date": datetime.today().strftime("%d-%m-%Y")}
-        )
+        response = self.agent.invoke(state)
         logger.debug(f"{config['configurable']['thread_id']} finish")
         return {"messages": [response]}

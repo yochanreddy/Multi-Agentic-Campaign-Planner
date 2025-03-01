@@ -6,6 +6,7 @@ from utils import get_module_logger
 from pydantic import BaseModel, Field
 
 logger = get_module_logger()
+ChannelType = Literal["Meta", "Google", "LinkedIn", "TikTok"]
 
 
 class InputSchema(BaseModel):
@@ -33,11 +34,9 @@ class InputSchema(BaseModel):
         ...,
         description="Personality characteristics, values, attitudes, aspirations, and lifestyle choices that define the target audience's decision-making and behavior patterns.",
     )
-    integrated_ad_platforms: List[Literal["Meta", "Google", "LinkedIn", "TikTok"]] = (
-        Field(
-            ...,
-            description="Digital advertising platforms integrated with the platform where campaigns could run",
-        )
+    integrated_ad_platforms: List[ChannelType] = Field(
+        ...,
+        description="Digital advertising platforms integrated with the platform where campaigns could run",
     )
 
     class Config:

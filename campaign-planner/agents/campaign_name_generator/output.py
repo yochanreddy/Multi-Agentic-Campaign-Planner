@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict
 
 from agents.base import OutputNode
 from langchain_core.runnables.config import RunnableConfig
@@ -7,13 +7,19 @@ from utils import get_module_logger
 from langchain.output_parsers import PydanticOutputParser
 
 logger = get_module_logger()
-ChannelType = Literal["Meta", "Google", "LinkedIn", "TikTok"]
 
 
 class OutputSchema(BaseModel):
-    recommended_ad_platforms: List[ChannelType] = Field(
+    campaign_name: str = Field(
         ...,
-        description="Recommended Digital advertising platforms integrated with the platform where campaigns will run",
+        description="A unique campaign identifier combining brand, timing, audience, and theme elements separated by underscores (e.g., 'BrandName_Season_TargetAudience_Theme'). This name helps in easily identifying and distinguishing marketing campaigns across the platform.",
+        examples=[
+            "Nike_Summer2024_GenZ_Streetwear",
+            "Apple_Q42023_Professionals_Innovation",
+        ],
+        min_length=5,
+        max_length=100,
+        pattern="^[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*$",  # Ensures proper underscore separation
     )
 
     class Config:

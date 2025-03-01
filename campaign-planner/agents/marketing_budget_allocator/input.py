@@ -38,6 +38,14 @@ class InputSchema(BaseModel):
         ...,
         description="Recommended Digital advertising platforms integrated with the platform where campaigns will run",
     )
+    campaign_start_date: str = Field(
+        description="Campaign start date in DD-MM-YYYY format",
+        pattern=r"^\d{2}-\d{2}-\d{4}$",
+    )
+    campaign_end_date: str = Field(
+        description="Campaign end date in DD-MM-YYYY format",
+        pattern=r"^\d{2}-\d{2}-\d{4}$",
+    )
 
     class Config:
         extra = "allow"

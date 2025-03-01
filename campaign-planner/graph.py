@@ -4,6 +4,8 @@ from agents.brand_industry_classifier import BrandIndustryClassifier
 from agents.audience_segment_analyzer import AudienceSegmentAnalyzer
 from agents.ad_channel_recommender import AdChannelRecommender
 from agents.campaign_schedule_recommender import CampaignScheduleRecommender
+from agents.marketing_budget_allocator import MarketingBudgetAllocator
+from agents.campaign_name_generator import CampaignNameGenerator
 from state import State
 
 
@@ -14,6 +16,8 @@ class CampaignPlanner(Graph):
         audience_segment_analyzer = AudienceSegmentAnalyzer(self.config)
         ad_channel_recommender = AdChannelRecommender(self.config)
         campaign_schedule_recommender = CampaignScheduleRecommender(self.config)
+        marketing_budget_allocator = MarketingBudgetAllocator(self.config)
+        campaign_name_generator = CampaignNameGenerator(self.config)
 
         # Create graph
         graph = StateGraph(State)
@@ -32,15 +36,25 @@ class CampaignPlanner(Graph):
             "campaign_schedule_recommender",
             campaign_schedule_recommender.get_compiled_graph(),
         )
+        graph.add_node(
+            "marketing_budget_allocator",
+            marketing_budget_allocator.get_compiled_graph(),
+        )
+        graph.add_node(
+            "campaign_name_generator",
+            campaign_name_generator.get_compiled_graph(),
+        )
 
         # Add edges
         graph.add_edge("brand_industry_classifier", "audience_segment_analyzer")
         graph.add_edge("audience_segment_analyzer", "ad_channel_recommender")
         graph.add_edge("ad_channel_recommender", "campaign_schedule_recommender")
+        graph.add_edge("campaign_schedule_recommender", "marketing_budget_allocator")
+        graph.add_edge("marketing_budget_allocator", "campaign_name_generator")
 
         # Add start and end points
         graph.set_entry_point("brand_industry_classifier")
-        graph.set_finish_point("campaign_schedule_recommender")
+        graph.set_finish_point("campaign_name_generator")
 
         return graph
 

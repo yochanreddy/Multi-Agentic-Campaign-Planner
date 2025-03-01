@@ -1,18 +1,12 @@
 import os
-import yaml
 
-from utils import get_module_logger
+from utils import load_config, get_module_logger, draw_mermaid_graph
 from graph import CampaignPlanner
 from langgraph.checkpoint.memory import MemorySaver
 import uuid
+import time
 
 logger = get_module_logger()
-
-
-def load_config(file_name: str = "config.yaml") -> dict:
-    with open(file_name, "r") as file:
-        data = yaml.safe_load(file)
-    return data
 
 
 def main():
@@ -20,6 +14,8 @@ def main():
     config["LOG_LEVEL"] = os.getenv("LOG_LEVEL", "INFO")
     config["checkpointer"] = MemorySaver()
     graph = CampaignPlanner(config).get_compiled_graph()
+    if os.getenv("LOG_LEVEL").lower() == "debug":
+        draw_mermaid_graph(graph)
 
     thread_config = {
         "configurable": {
@@ -27,7 +23,7 @@ def main():
             "global_parameters": {},
         }
     }
-
+    start_time = time.time()
     for update in graph.invoke(
         {
             "brand_name": "Zepto",
@@ -43,8 +39,9 @@ def main():
     ):
         for node_id, value in update.items():
             print("*" * 10)
-            print(f"AI: {value}")
+            print(f"AI: {value['messages'][-1].content}")
             print("#" * 10)
+    logger.info("total runtime %f", time.time() - start_time)
 
 
 if __name__ == "__main__":

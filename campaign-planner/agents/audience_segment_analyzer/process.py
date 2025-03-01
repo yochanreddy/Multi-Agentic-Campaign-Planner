@@ -20,7 +20,7 @@ class Process(ProcessNode):
         self.prompt.partial_variables["format_instructions"] = (
             Output.output_parser.get_format_instructions()
         )
-        self.agent = self.prompt | self.llm.bind_tools(tools=tools)
+        self.agent = self.prompt | self.llm  # .bind_tools(tools=tools)
 
     def process(self, state: State, config: RunnableConfig):
         logger.debug(f"{config['configurable']['thread_id']} start")

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, Literal
 
 from agents.base import OutputNode
 from langchain_core.runnables.config import RunnableConfig
@@ -11,9 +11,11 @@ ChannelType = Literal["Meta", "Google", "LinkedIn", "TikTok"]
 
 
 class OutputSchema(BaseModel):
-    recommended_ad_platforms: List[ChannelType] = Field(
-        ...,
-        description="Recommended Digital advertising platforms integrated with the platform where campaigns will run",
+    total_budget: float = Field(
+        description="The total daily budget predicted to run a campaign based on the previous outputs"
+    )
+    channel_budget_allocation: Dict[ChannelType, float] = Field(
+        description="A dictionary with the recommended channel names as keys and their respective daily budget allocations in INR"
     )
 
     class Config:

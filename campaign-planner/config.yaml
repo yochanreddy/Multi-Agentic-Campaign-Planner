@@ -18,3 +18,9 @@ DATASTORE:
 
 DATA:
   CATEGORIES_PATH: "data/categories.json"
+
+AD_CHANNELS:
+- Meta
+- Google
+- LinkedIn
+- TikTok
