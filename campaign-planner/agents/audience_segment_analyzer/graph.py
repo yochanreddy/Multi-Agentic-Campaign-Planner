@@ -13,7 +13,7 @@ from langchain_core.prompts import PromptTemplate
 logger = get_module_logger()
 
 
-class BrandMappingGraph(Graph):
+class AudienceSegmentAnalyzer(Graph):
     def __init__(self, config):
         super().__init__(config)
         # Initialize the retriever

@@ -4,7 +4,6 @@ import yaml
 from utils import get_module_logger
 from graph import CampaignPlanner
 from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.messages import AIMessage, HumanMessage
 import uuid
 
 # Load environment variables from .env file
@@ -34,7 +33,6 @@ def main():
 
     for update in graph.invoke(
         {
-            "messages": [HumanMessage("START")],
             "brand_name": "Zepto",
             "website": "www.zeptonow.com",
             "brand_description": "Top 3 quick delivery service startup",
@@ -45,10 +43,8 @@ def main():
         stream_mode="updates",
     ):
         for node_id, value in update.items():
-            if "messages" in value and isinstance(
-                value["messages"][-1], (HumanMessage, AIMessage)
-            ):
-                print(f"AI: {value['messages'][-1].content}")
+            if "industry" in value:
+                print(f"AI: {value['industry']}")
 
 
 if __name__ == "__main__":

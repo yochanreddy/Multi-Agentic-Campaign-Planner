@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 # ANSI color codes for terminal output
 class LogColors:
     GREY = "\033[38;5;240m"
@@ -103,7 +104,7 @@ def setup_logger(logger_name: str, log_dir: str = "logs"):
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-    logger.info(f"Logger initialized with level {log_level_name}")
+    logger.debug(f"Logger initialized with level {log_level_name}")
 
     return logger
 

@@ -64,7 +64,7 @@ class Retriever:
         texts = []
         metadatas = []
 
-        logger.info("Generating descriptions and storing embeddings...")
+        logger.debug("Generating descriptions and storing embeddings...")
         for category in tqdm(self.categories):
             description = self.generate_category_description(category)
             if description:
@@ -75,7 +75,7 @@ class Retriever:
             # Add texts to the vector store
             self.vector_store.add_texts(texts=texts, metadatas=metadatas)
             self.vector_store.persist()
-            logger.info(f"Successfully stored {len(texts)} category descriptions")
+            logger.debug(f"Successfully stored {len(texts)} category descriptions")
         except Exception as e:
             logger.error(f"Error storing embeddings: {str(e)}")
 
@@ -87,7 +87,7 @@ class Retriever:
         self.categories = self._load_categories()
         # Check if database already contains embeddings
         if len(self.vector_store.get()["ids"]) == 0:
-            logger.info("Initializing database with category descriptions...")
+            logger.debug("Initializing database with category descriptions...")
             self.embed_and_store_categories()
         else:
-            logger.info("Database already contains embeddings")
+            logger.debug("Database already contains embeddings")
