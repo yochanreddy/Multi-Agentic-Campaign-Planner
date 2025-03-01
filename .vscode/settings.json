@@ -1,6 +1,8 @@
 {
     "python.analysis.autoImportCompletions": true,
     "cSpell.words": [
-        "levelname"
+        "KWARGS",
+        "levelname",
+        "vectorstore"
     ]
 }

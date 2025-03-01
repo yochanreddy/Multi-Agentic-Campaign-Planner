@@ -4,7 +4,10 @@ import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
+import inspect
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # ANSI color codes for terminal output
 class LogColors:
@@ -103,3 +106,19 @@ def setup_logger(logger_name: str, log_dir: str = "logs"):
     logger.info(f"Logger initialized with level {log_level_name}")
 
     return logger
+
+
+def get_module_logger():
+    # Get the calling frame to identify which file is requesting the logger
+    caller_frame = inspect.currentframe().f_back
+    current_file = Path(caller_frame.f_code.co_filename)
+    project_root = Path(os.getenv("PROJECT_ROOT", "root"))
+
+    try:
+        relative_path = current_file.relative_to(project_root)
+        path_parts = list(relative_path.parent.parts) + [current_file.stem]
+        logger_name = ".".join([os.getenv("PROJECT_ROOT", "root")] + path_parts)
+    except ValueError:
+        logger_name = f"{os.getenv('PROJECT_ROOT', 'root')}.{current_file.parent.name}.{current_file.stem}"
+
+    return setup_logger(logger_name)

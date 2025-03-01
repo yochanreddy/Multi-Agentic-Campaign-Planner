@@ -1,11 +1,16 @@
 import os
-from pathlib import Path
 import yaml
-from utils import setup_logger
 
-os.environ["PROJECT_NAME"] = Path(__file__).parent.name
+from utils import get_module_logger
+from graph import CampaignPlanner
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.messages import AIMessage, HumanMessage
+import uuid
 
-logger = setup_logger(f"{os.getenv('PROJECT_NAME', 'root')}")
+# Load environment variables from .env file
+
+
+logger = get_module_logger()
 
 
 def load_config(file_name: str = "config.yaml") -> dict:
@@ -16,7 +21,34 @@ def load_config(file_name: str = "config.yaml") -> dict:
 
 def main():
     config = load_config()
-    print("Hello from campaign-planner!")
+    config["LOG_LEVEL"] = os.getenv("LOG_LEVEL", "INFO")
+    config["checkpointer"] = MemorySaver()
+    graph = CampaignPlanner(config).get_compiled_graph()
+
+    thread_config = {
+        "configurable": {
+            "thread_id": str(uuid.uuid4()),
+            "global_parameters": {},
+        }
+    }
+
+    for update in graph.invoke(
+        {
+            "messages": [HumanMessage("START")],
+            "brand_name": "Zepto",
+            "website": "www.zeptonow.com",
+            "brand_description": "Top 3 quick delivery service startup",
+            "product_name": "Zepto Cafe",
+            "product_description": "Zepto Cafe is a 10-minute food delivery service offering a diverse menu of freshly prepared snacks, beverages, and meals, combining speed and quality to cater to fast-paced urban lifestyles.",
+        },
+        config=thread_config,
+        stream_mode="updates",
+    ):
+        for node_id, value in update.items():
+            if "messages" in value and isinstance(
+                value["messages"][-1], (HumanMessage, AIMessage)
+            ):
+                print(f"AI: {value['messages'][-1].content}")
 
 
 if __name__ == "__main__":

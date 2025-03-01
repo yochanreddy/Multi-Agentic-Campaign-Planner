@@ -1,6 +1,7 @@
 from langgraph.graph import StateGraph
 from agents.base import Graph
 from agents.brand_mapping import BrandMappingGraph
+from state import State
 
 
 class CampaignPlanner(Graph):
@@ -9,7 +10,7 @@ class CampaignPlanner(Graph):
         brand_mapper = BrandMappingGraph(self.config)
 
         # Create graph
-        graph = StateGraph()
+        graph = StateGraph(State)
 
         # Add nodes
         graph.add_node("brand_mapping", brand_mapper.get_compiled_graph())

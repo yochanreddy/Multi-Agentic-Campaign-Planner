@@ -1,23 +1,13 @@
 from abc import ABC, abstractmethod
 import inspect
-import os
 from pathlib import Path
 from typing import Any, List
 from langchain_core.messages import AnyMessage, AIMessage, HumanMessage
-from langchain.prompts import load_prompt
-from utils import setup_logger
-from langchain_openai.chat_models import ChatOpenAI
+from langchain.prompts import load_prompt, PromptTemplate
+from utils import get_module_logger, Generator
+from langchain_core.runnables.config import RunnableConfig
 
-logger = setup_logger(
-    f"{os.getenv('PROJECT_NAME', 'root')}.{Path(__file__).parent.name}"
-)
-
-
-class InputNode(ABC):
-    @abstractmethod
-    def validate_and_parse(self, state: Any) -> Any:
-        """Validate and parse input state"""
-        pass
+logger = get_module_logger()
 
 
 class ProcessNode(ABC):
@@ -28,20 +18,30 @@ class ProcessNode(ABC):
     handling message processing. It can be extended for various types of nodes
     in the campaign planning pipeline.
 
+    The class handles:
+    - Loading and managing prompt templates from YAML files
+    - Interfacing with language models
+    - Processing conversation messages
+
     Attributes:
         llm (ChatOpenAI): Language model instance for generating responses
         prompt (str): Loaded prompt template from YAML file
     """
 
-    def __init__(self, config: dict, prompt_file_name: str = "prompt.yaml") -> None:
+    def __init__(
+        self, config: dict, model_name: str, prompt_file_name: str = "prompt.yaml"
+    ) -> None:
         """
-        Initialize the base node.
+        Initialize the base node with configuration and prompt template.
+
         Args:
-            config (dict): Configuration dictionary containing LLM settings
+            config (dict): Configuration dictionary containing LLM settings and parameters
+            model_name (str): Name of the language model to use
             prompt_file_name (str, optional): Name of the prompt template file.
                 Defaults to "prompt.yaml"
+
         Raises:
-            FileNotFoundError: If the prompt file cannot be found
+            FileNotFoundError: If the specified prompt template file cannot be found
         """
         module_path = Path(inspect.getmodule(self.__class__).__file__)
         prompt_file_path = module_path.parent / prompt_file_name
@@ -49,27 +49,23 @@ class ProcessNode(ABC):
         if not prompt_file_path.exists():
             raise FileNotFoundError(f"Prompt file not found: {prompt_file_path}")
 
-        self.llm = ChatOpenAI(
-            model=config["LLM"]["MODEL_NAME"],
-            temperature=config["LLM"]["TEMPERATURE"],
-            max_completion_tokens=config["LLM"]["TOP_P"],
-            streaming=config["LLM"]["STREAMING"],
-        )
+        self.llm = Generator(config).get_model(name=model_name)
         self.prompt = self._load_prompt(prompt_file_path)
 
     @staticmethod
-    def _load_prompt(prompt_file: Path) -> str:
+    def _load_prompt(prompt_file: Path) -> PromptTemplate:
         """
-        Load prompts from a YAML file.
+        Load and parse prompts from a YAML file.
 
         Args:
-            prompt_file (Path): Path to the YAML prompt file
+            prompt_file (Path): Path to the YAML prompt template file
 
         Returns:
-            str: Loaded prompt template
+            PromptTemplate: Loaded and parsed prompt template
 
         Raises:
-            FileNotFoundError: If the YAML file doesn't exist
+            FileNotFoundError: If the specified YAML file doesn't exist
+            YAMLError: If the YAML file is malformed or cannot be parsed
         """
         try:
             return load_prompt(prompt_file)
@@ -78,15 +74,18 @@ class ProcessNode(ABC):
             raise e
 
     @abstractmethod
-    def process(self, state: Any) -> Any:
+    def process(self, state: Any, config: RunnableConfig) -> Any:
         """
         Abstract method to invoke the node's processing logic.
 
+        This method should be implemented by subclasses to define the specific
+        processing logic for each type of node in the campaign planning system.
+
         Args:
-            state (Any): The state to be processed
+            state (Any): The input state to be processed
 
         Returns:
-            Any: The node's processed response
+            Any: The processed response or transformed state
 
         Raises:
             NotImplementedError: Must be implemented in a subclass
@@ -96,13 +95,19 @@ class ProcessNode(ABC):
     @staticmethod
     def _to_string(messages: List[AnyMessage]) -> str:
         """
-        Flatten a list of messages to a formatted string.
+        Flatten a list of conversation messages to a formatted string.
+
+        Converts a list of different message types (Human, AI, Tool) into a
+        human-readable conversation format with clear separation between messages.
 
         Args:
-            messages (List[AnyMessage]): List of messages (Human, AI, Tool Messages)
+            messages (List[AnyMessage]): List of conversation messages
+                (Human, AI, Tool Messages)
 
         Returns:
-            str: Formatted string containing all messages in a conversation format
+            str: Formatted string containing all messages in a conversation format,
+                with speakers clearly identified and messages separated by
+                delimiting markers
         """
         response: str = ""
         for message in messages:
@@ -113,10 +118,3 @@ class ProcessNode(ABC):
                 response += "---\n"
 
         return response.strip()
-
-
-class OutputNode(ABC):
-    @abstractmethod
-    def format_output(self, state: Any) -> Any:
-        """Format the output state"""
-        pass

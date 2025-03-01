@@ -8,7 +8,6 @@ class Graph(ABC):
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.graph = self._build_graph()
 
     @abstractmethod
     def _build_graph(
@@ -29,7 +28,8 @@ class Graph(ABC):
 
     def get_compiled_graph(self) -> StateGraph:
         """Return the compiled graph"""
-        return self.graph.compile(
+        graph = self._build_graph()
+        return graph.compile(
             checkpointer=self.config["checkpointer"],
             debug=(self.config["LOG_LEVEL"] == "DEBUG"),
         )
