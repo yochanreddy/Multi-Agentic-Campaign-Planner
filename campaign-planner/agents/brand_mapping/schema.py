@@ -2,12 +2,18 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-class Input(BaseModel):
+class InputSchema(BaseModel):
     brand_name: str = Field(..., description="Name of Brand")
     brand_description: str = Field(..., description="Description of Brand")
-    website: str = Field(..., description="Website of Brand")
-    product_name: Optional[str] = Field(..., description="Product of Brand")
+    product_name: Optional[str] = Field(default="", description="Product of Brand")
     product_description: Optional[str] = Field(
-        ..., description="Description of Product"
+        default="", description="Description of Product"
     )
+    website: Optional[str] = Field(default="", description="Website of Brand")
+
+    class Config:
+        extra = "allow"
+
+
+class OutputSchema(BaseModel):
     industry: str = Field(..., description="Classified Industry Type")

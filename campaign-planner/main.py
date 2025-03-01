@@ -1,7 +1,11 @@
+import os
+from pathlib import Path
 import yaml
 from utils import setup_logger
 
-logger = setup_logger("campaign_planner")
+os.environ["PROJECT_NAME"] = Path(__file__).parent.name
+
+logger = setup_logger(f"{os.getenv('PROJECT_NAME', 'root')}")
 
 
 def load_config(file_name: str = "config.yaml") -> dict:
