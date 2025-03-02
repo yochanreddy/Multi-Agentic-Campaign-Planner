@@ -6,7 +6,7 @@ from utils import get_module_logger
 logger = get_module_logger()
 
 
-class OutputNode(ABC):
+class BaseOutputNode(ABC):
     @abstractmethod
     def format_output(self, state: Any, config: RunnableConfig) -> Any:
         """

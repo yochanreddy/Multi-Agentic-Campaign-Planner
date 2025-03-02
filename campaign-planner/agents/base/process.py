@@ -10,7 +10,7 @@ from langchain_core.runnables.config import RunnableConfig
 logger = get_module_logger()
 
 
-class ProcessNode(ABC):
+class BaseProcessNode(ABC):
     """
     Base class for general-purpose nodes in a campaign planning system.
 

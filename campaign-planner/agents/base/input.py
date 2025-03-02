@@ -6,7 +6,7 @@ from utils import get_module_logger
 logger = get_module_logger()
 
 
-class InputNode(ABC):
+class BaseInputNode(ABC):
     @abstractmethod
     def validate_and_parse(self, state: Any, config: RunnableConfig) -> Any:
         """

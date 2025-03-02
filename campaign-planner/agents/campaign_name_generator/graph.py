@@ -1,9 +1,10 @@
 from langgraph.graph import StateGraph
-from agents.base import Graph
-from .input import InputSchema, Input
-from .output import OutputSchema, Output
-from .process import Process
-from .router import Router
+from agents.base import BaseGraph
+from .input import InputSchema, InputNode
+from .output import OutputSchema, OutputNode
+from .process import ProcessNode
+from .router import RouterNode
+from .human import HumanNode
 from state import State
 from utils import get_module_logger
 from langgraph.prebuilt import ToolNode
@@ -11,17 +12,18 @@ from langgraph.prebuilt import ToolNode
 logger = get_module_logger()
 
 
-class CampaignNameGenerator(Graph):
+class CampaignNameGenerator(BaseGraph):
     def __init__(self, config):
         super().__init__(config)
         self.tools = []
 
     def _build_graph(self) -> StateGraph:
         # Create nodes
-        input_node = Input()
-        process_node = Process(self.config, self.tools)
-        output_node = Output()
-        router_node = Router()
+        input_node = InputNode()
+        process_node = ProcessNode(self.config, self.tools)
+        output_node = OutputNode()
+        human_node = HumanNode()
+        router_node = RouterNode()
         tool_node = ToolNode(self.tools)
 
         # Create graph
@@ -31,6 +33,7 @@ class CampaignNameGenerator(Graph):
         graph.add_node("input_node", input_node.validate_and_parse)
         graph.add_node("process_node", process_node.process)
         graph.add_node("output_node", output_node.format_output)
+        graph.add_node("human_node", human_node.get_human_validation)
         graph.add_node("tool_node", tool_node)
 
         # Add edges
@@ -41,10 +44,11 @@ class CampaignNameGenerator(Graph):
             {"tool": "tool_node", "finish": "output_node"},
         )
         graph.add_edge("tool_node", "process_node")
+        graph.add_edge("output_node", "human_node")
 
         # Add start and end points
         graph.set_entry_point("input_node")
-        graph.set_finish_point("output_node")
+        graph.set_finish_point("human_node")
 
         return graph
 

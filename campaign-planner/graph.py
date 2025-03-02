@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph
-from agents.base import Graph
+from agents.base import BaseGraph
 from agents.brand_industry_classifier import BrandIndustryClassifier
 from agents.audience_segment_analyzer import AudienceSegmentAnalyzer
 from agents.ad_channel_recommender import AdChannelRecommender
@@ -9,7 +9,7 @@ from agents.campaign_name_generator import CampaignNameGenerator
 from state import State
 
 
-class CampaignPlanner(Graph):
+class CampaignPlanner(BaseGraph):
     def _build_graph(self):
         # Create nodes
         brand_industry_classifier = BrandIndustryClassifier(self.config)

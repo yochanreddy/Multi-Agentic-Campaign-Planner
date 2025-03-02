@@ -1,13 +1,13 @@
-from agents.base import ProcessNode
+from agents.base import BaseProcessNode
 from langchain_core.runnables.config import RunnableConfig
-from .output import Output
+from .output import OutputNode
 from state import State
 from utils import get_module_logger
 
 logger = get_module_logger()
 
 
-class Process(ProcessNode):
+class ProcessNode(BaseProcessNode):
     def __init__(
         self,
         config: dict,
@@ -18,7 +18,7 @@ class Process(ProcessNode):
         super().__init__(config, model_name, prompt_file_name)
 
         self.prompt.partial_variables["format_instructions"] = (
-            Output.output_parser.get_format_instructions()
+            OutputNode.output_parser.get_format_instructions()
         )
         self.agent = self.prompt | self.llm.bind_tools(tools=tools)
 

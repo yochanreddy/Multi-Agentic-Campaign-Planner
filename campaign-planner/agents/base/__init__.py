@@ -1,7 +1,15 @@
-from .input import InputNode
-from .process import ProcessNode
-from .output import OutputNode
-from .graph import Graph
-from .router import RouterNode
+from .input import BaseInputNode
+from .process import BaseProcessNode
+from .output import BaseOutputNode
+from .graph import BaseGraph
+from .router import BaseRouterNode
+from .human import BaseHumanNode
 
-__all__ = ["InputNode", "ProcessNode", "RouterNode", "OutputNode", "Graph"]
+__all__ = [
+    "BaseInputNode",
+    "BaseProcessNode",
+    "BaseRouterNode",
+    "BaseOutputNode",
+    "BaseGraph",
+    "BaseHumanNode",
+]

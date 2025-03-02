@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from agents.base import InputNode
+from agents.base import BaseInputNode
 from langchain_core.runnables.config import RunnableConfig
 from utils import get_module_logger
 from typing import Optional
@@ -19,10 +19,10 @@ class InputSchema(BaseModel):
     website: Optional[str] = Field(default="", description="Website of Brand")
 
     class Config:
-        extra = "allow"
+        extra = "ignore"
 
 
-class Input(InputNode):
+class InputNode(BaseInputNode):
     def validate_and_parse(
         self, state: Dict[str, Any], config: RunnableConfig
     ) -> Dict[str, Any]:
@@ -30,4 +30,4 @@ class Input(InputNode):
         logger.debug(f"{config['configurable']['thread_id']} start")
         input_data = InputSchema.model_validate(state)
         logger.debug(f"{config['configurable']['thread_id']} finish")
-        return {"input": input_data}
+        return input_data.model_dump()

@@ -6,7 +6,7 @@ from utils import get_module_logger
 logger = get_module_logger()
 
 
-class RouterNode(ABC):
+class BaseRouterNode(ABC):
     @abstractmethod
     def determine_next_step(self, state: Any, config: RunnableConfig) -> Any:
         """

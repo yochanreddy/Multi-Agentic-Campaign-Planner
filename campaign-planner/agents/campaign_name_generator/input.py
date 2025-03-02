@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Literal
 
-from agents.base import InputNode
+from agents.base import BaseInputNode
 from langchain_core.runnables.config import RunnableConfig
 from utils import get_module_logger
 from pydantic import BaseModel, Field
@@ -39,10 +39,10 @@ class InputSchema(BaseModel):
     )
 
     class Config:
-        extra = "allow"
+        extra = "ignore"
 
 
-class Input(InputNode):
+class InputNode(BaseInputNode):
     def validate_and_parse(
         self, state: Dict[str, Any], config: RunnableConfig
     ) -> Dict[str, Any]:
@@ -50,4 +50,4 @@ class Input(InputNode):
         logger.debug(f"{config['configurable']['thread_id']} start")
         input_data = InputSchema.model_validate(state)
         logger.debug(f"{config['configurable']['thread_id']} finish")
-        return {"input": input_data}
+        return input_data.model_dump()

@@ -1,4 +1,4 @@
-from agents.base import RouterNode
+from agents.base import BaseRouterNode
 from utils import get_module_logger
 from langchain_core.runnables.config import RunnableConfig
 from state import State
@@ -6,7 +6,7 @@ from state import State
 logger = get_module_logger()
 
 
-class Router(RouterNode):
+class RouterNode(BaseRouterNode):
     def determine_next_step(self, state: State, config: RunnableConfig) -> str:
         logger.debug(f"{config['configurable']['thread_id']} start")
         intent = "finish"

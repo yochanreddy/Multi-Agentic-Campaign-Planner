@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Any, Dict
 
-from agents.base import OutputNode
+from agents.base import BaseOutputNode
 from langchain_core.runnables.config import RunnableConfig
 from utils import get_module_logger
 from langchain.output_parsers import PydanticOutputParser
@@ -23,10 +23,10 @@ class OutputSchema(BaseModel):
     )
 
     class Config:
-        extra = "allow"
+        extra = "ignore"
 
 
-class Output(OutputNode):
+class OutputNode(BaseOutputNode):
     output_parser = PydanticOutputParser(pydantic_object=OutputSchema)
 
     def __init__(self):
