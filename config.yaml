@@ -1,0 +1,30 @@
+OPENAI:
+  EMBEDDINGS:
+    MODEL_NAME: text-embedding-3-large
+  COMPLETION:
+    MODEL_NAME: gpt-4o
+    MAX_TOKENS: 4096
+    TEMPERATURE: 0.1
+    STOP_SEQUENCES:
+      - "\n\nHuman"
+    STREAMING: False
+
+DATASTORE:
+  PATH: datastore
+  RETRIEVAL:
+    SEARCH_TYPE: "similarity"
+    SEARCH_KWARGS:
+      k: 3
+
+DATA:
+  CATEGORIES_PATH: "data/categories.json"
+
+GRAPH:
+  ENABLE_USER_VALIDATION: False
+
+AD_CHANNELS:
+- Meta
+- Google
+- LinkedIn
+- TikTok
+- Shopify

@@ -3,6 +3,7 @@
     "cSpell.words": [
         "KWARGS",
         "levelname",
+        "PGSQL",
         "vectorstore"
     ]
 }
