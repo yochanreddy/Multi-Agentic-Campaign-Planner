@@ -1,5 +1,6 @@
 import os
-from typing import List, Literal
+import logging
+from typing import List, Literal, Optional
 import uuid
 from fastapi import BackgroundTasks, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,13 +9,24 @@ from langgraph.checkpoint.memory import MemorySaver
 from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel, Field
 from campaign_planner.utils import load_config, draw_mermaid_graph
+from creative_planner.graph import CreativePlanner
 from contextlib import asynccontextmanager
 from campaign_planner.graph import CampaignPlanner
 from enum import Enum
+from fastapi import HTTPException
+from creative_planner.utils.logging_config import configure_logging
+from creative_planner.utils.storage import get_signed_url, save_image
+from creative_planner.agents.cta_generator.graph import CTAGeneratorGraph
+from creative_planner.agents.text_layering.graph import TextLayeringGraph
 
 workflow = None
+creative_workflow = None
 ChannelType = Literal["Meta", "Google", "LinkedIn", "TikTok"]
 config = None
+
+# Configure logging
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 class ProcessingStatus(str, Enum):
@@ -28,6 +40,7 @@ class ProcessingStatus(str, Enum):
 async def lifespan(app: FastAPI):
     global ChannelType
     global workflow
+    global creative_workflow
     global config
 
     config = load_config()
@@ -37,6 +50,7 @@ async def lifespan(app: FastAPI):
         config["checkpointer"] = MemorySaver()
 
         workflow = CampaignPlanner(config).get_compiled_graph()
+        creative_workflow = CreativePlanner(config).get_compiled_graph()
         draw_mermaid_graph(workflow)
         yield
     else:
@@ -55,31 +69,46 @@ async def lifespan(app: FastAPI):
             config["checkpointer"] = checkpointer
 
             workflow = CampaignPlanner(config).get_compiled_graph()
+            creative_workflow = CreativePlanner(config).get_compiled_graph()
             yield
+
+    # Initialize the workflow
+    creative_workflow = CreativePlanner()
+    cta_generator = CTAGeneratorGraph()
+    text_layering = TextLayeringGraph()
+    
+    # Add nodes to the workflow
+    creative_workflow.add_node("cta_generator", cta_generator.process)
+    creative_workflow.add_node("text_layering", text_layering.process)
+    
+    # Add edges
+    creative_workflow.add_edge("cta_generator", "text_layering")
+    
+    logger.info("Workflow initialized successfully")
 
 
 class SubmitRequest(BaseModel):
-    brand_description: str = Field(
-        description="Comprehensive description of the brand's identity, values and market positioning"
-    )
-    brand_name: str = Field(
-        description="Official registered name of the brand or company"
-    )
-    product_description: str = Field(
-        description="Detailed explanation of product features, benefits and unique selling points"
-    )
-    product_name: str = Field(
-        description="Specific name or model of the product being advertised"
-    )
-    website: str = Field(
-        description="Full URL of the brand's or product's landing page"
-    )
-    campaign_objective: str = Field(
-        description="Primary marketing goal (e.g. 'Brand Awareness', 'Lead Generation', 'Sales Conversion')"
-    )
-    integrated_ad_platforms: List[ChannelType] = Field(
-        description="Digital advertising platforms where campaigns will run (e.g. 'Meta', 'Google', 'LinkedIn', 'TikTok')"
-    )
+    age_group: str = Field(description="Target demographic age range (e.g. '18-24', '25-34', '35-44')")
+    brand_description: str = Field(description="Comprehensive description of the brand's identity, values and market positioning")
+    brand_name: str = Field(description="Official registered name of the brand or company")
+    campaign_objective: str = Field(description="Primary marketing goal (e.g. 'Brand Awareness', 'Lead Generation', 'Sales Conversion')")
+    gender: str = Field(description="Target audience gender identity ('Male', 'Female', 'All')")
+    industry: str = Field(description="Business sector or market category (e.g. 'Retail', 'Technology', 'Healthcare')")
+    interests: List[str] = Field(description="Specific hobbies, activities and topics that appeal to the target audience")
+    locations: List[str] = Field(description="Geographic targeting areas including cities, regions or countries")
+    campaign_name: str = Field(description="A unique campaign identifier combining brand, timing, audience, and theme elements separated by underscores")
+    psychographic_traits: List[str] = Field(description="Psychological and behavioral characteristics of target audience (e.g. 'Environmentally conscious', 'Tech-savvy', 'Health-oriented')")
+    
+    # Optional fields
+    product_description: Optional[str] = Field(default=None, description="Detailed explanation of product features, benefits and unique selling points")
+    product_name: Optional[str] = Field(default=None, description="Specific name or model of the product being advertised")
+    website: Optional[str] = Field(default=None, description="Full URL of the brand's or product's landing page")
+    integrated_ad_platforms: Optional[List[ChannelType]] = Field(default=None, description="Digital advertising platforms where campaigns will run (e.g. 'Meta', 'Google', 'LinkedIn', 'TikTok')")
+    recommended_ad_platforms: Optional[List[ChannelType]] = Field(default=None, description="Recommended Digital advertising platforms integrated with the platform where campaigns will run")
+    campaign_start_date: Optional[str] = Field(default=None, description="Starting date of the marketing campaign (format: DD-MM-YYYY)")
+    campaign_end_date: Optional[str] = Field(default=None, description="Ending date of the marketing campaign (format: DD-MM-YYYY)")
+    total_budget: Optional[float] = Field(default=None, description="The total daily budget predicted to run a campaign based on the previous outputs")
+    channel_budget_allocation: Optional[dict] = Field(default=None, description="A dictionary with the recommended channel names as keys and their respective daily budget allocations in INR")
 
     class Config:
         json_schema_extra = {
@@ -91,6 +120,13 @@ class SubmitRequest(BaseModel):
                 "product_description": "Zepto Cafe is a 10-minute food delivery service offering a diverse menu of freshly prepared snacks, beverages, and meals, combining speed and quality to cater to fast-paced urban lifestyles.",
                 "campaign_objective": "Increase Brand Awareness",
                 "integrated_ad_platforms": ["Meta", "Google"],
+                "industry": "Food Delivery",
+                "age_group": "18-34",
+                "gender": "All",
+                "interests": ["Food & Beverage", "Quick Service", "Urban Lifestyle"],
+                "locations": ["Mumbai", "Delhi", "Bangalore"],
+                "psychographic_traits": ["Time-conscious", "Quality-focused", "Tech-savvy"],
+                "campaign_name": "Zepto_Cafe_Summer_2024"
             }
         }
 
@@ -105,66 +141,12 @@ class StatusResponse(BaseModel):
 
 
 class ResultResponse(BaseModel):
-    age_group: str = Field(
-        description="Target demographic age range (e.g. '18-24', '25-34', '35-44')"
-    )
-    brand_description: str = Field(
-        description="Comprehensive description of the brand's identity, values and market positioning"
-    )
-    brand_name: str = Field(
-        description="Official registered name of the brand or company"
-    )
-    campaign_objective: str = Field(
-        description="Primary marketing goal (e.g. 'Brand Awareness', 'Lead Generation', 'Sales Conversion')"
-    )
-    gender: str = Field(
-        description="Target audience gender identity ('Male', 'Female', 'All')"
-    )
-    industry: str = Field(
-        description="Business sector or market category (e.g. 'Retail', 'Technology', 'Healthcare')"
-    )
-    interests: List[str] = Field(
-        description="Specific hobbies, activities and topics that appeal to the target audience"
-    )
-    locations: List[str] = Field(
-        description="Geographic targeting areas including cities, regions or countries"
-    )
-    product_description: str = Field(
-        description="Detailed explanation of product features, benefits and unique selling points"
-    )
-    product_name: str = Field(
-        description="Specific name or model of the product being advertised"
-    )
-    psychographic_traits: List[str] = Field(
-        description="Psychological and behavioral characteristics of target audience (e.g. 'Environmentally conscious', 'Tech-savvy', 'Health-oriented')"
-    )
-    website: str = Field(
-        description="Full URL of the brand's or product's landing page"
-    )
-    integrated_ad_platforms: List[str] = Field(
-        description="Digital advertising platforms where campaigns will run (e.g. 'Meta', 'Google', 'LinkedIn', 'TikTok')"
-    )
-    recommended_ad_platforms: List[str] = Field(
-        description="Recommended Digital advertising platforms integrated with the platform where campaigns will run"
-    )
-    campaign_name: str = Field(
-        description="A unique campaign identifier combining brand, timing, audience, and theme elements separated by underscores"
-    )
-    campaign_start_date: str = Field(
-        description="Starting date of the marketing campaign (format: DD-MM-YYYY)"
-    )
-    campaign_end_date: str = Field(
-        description="Ending date of the marketing campaign (format: DD-MM-YYYY)"
-    )
-    total_budget: float = Field(
-        description="The total daily budget predicted to run a campaign based on the previous outputs"
-    )
-    channel_budget_allocation: dict = Field(
-        description="A dictionary with the recommended channel names as keys and their respective daily budget allocations in INR",
-    )
+    """Response model for getting creative plan results"""
+    signed_url: str = Field(..., description="Signed URL for the final creative image")
 
-    class Config:
-        extra = "ignore"
+
+class CreativePlanResponse(BaseModel):
+    system_prompt: str = Field(description="Generated creative prompts for the campaign")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -226,3 +208,87 @@ async def get_campaign_plan(request_id: str) -> ResultResponse:
     current_state = await workflow.aget_state(thread_config)
 
     return ResultResponse.model_validate(current_state.values)
+
+
+@app.post("/request_creative_plan", response_model=SubmitResponse)
+async def request_creative_plan(
+    request: SubmitRequest, background_tasks: BackgroundTasks
+) -> SubmitResponse:
+    response = SubmitResponse(request_id=str(uuid.uuid4()))
+
+    thread_config = {
+        "configurable": {
+            "thread_id": response.request_id,
+        }
+    }
+
+    background_tasks.add_task(
+        creative_workflow.ainvoke, request.model_dump(), config=thread_config
+    )
+
+    return response
+
+
+@app.get("/status_creative_plan/{request_id}", response_model=StatusResponse)
+async def status_creative_plan(request_id: str) -> StatusResponse:
+    thread_config = {
+        "configurable": {
+            "thread_id": request_id,
+        }
+    }
+    current_state = await creative_workflow.aget_state(thread_config)
+
+    if current_state.next:
+        response = StatusResponse(
+            processing_status=ProcessingStatus.BUILDING,
+            processing_node=current_state.next[0],
+        )
+    else:
+        response = StatusResponse(processing_status=ProcessingStatus.COMPLETE)
+
+    return response
+
+
+@app.get("/get_creative_plan/{request_id}", response_model=ResultResponse)
+async def get_creative_plan(request_id: str):
+    """Get the final creative plan result"""
+    thread_config = {
+        "configurable": {
+            "thread_id": request_id,
+        }
+    }
+    
+    try:
+        state = await creative_workflow.aget_state(thread_config)
+        if not state:
+            raise HTTPException(status_code=404, detail="Request ID not found")
+        
+        # Get the text-layered image path from the state
+        image_path = state.values.get("generated_image_path")
+        if not image_path:
+            raise HTTPException(status_code=404, detail="Creative plan not ready yet")
+            
+        # Get the output image path from the same directory
+        output_path = os.path.join(os.path.dirname(image_path), "output.png")
+        if not os.path.exists(output_path):
+            raise HTTPException(status_code=404, detail="Creative plan not ready yet")
+            
+        # Read the image file
+        with open(output_path, 'rb') as f:
+            image_data = f.read()
+            
+        # Generate a unique blob name
+        generation_id = f"{uuid.uuid4()}"
+        blob_name = f"image_gen_agents/{generation_id}/output.jpeg"
+        
+        # Save the image to storage and get the URL
+        image_url = save_image(image_data, blob_name)
+        
+        # Generate signed URL
+        signed_url = get_signed_url(blob_name)
+        if not signed_url:
+            raise HTTPException(status_code=500, detail="Failed to generate signed URL")
+            
+        return ResultResponse(signed_url=signed_url)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

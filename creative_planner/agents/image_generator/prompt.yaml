@@ -1,0 +1,29 @@
+_type: prompt
+input_variables:
+  - system_prompt
+  - brand_name
+  - product_name
+template: |
+  Based on the following creative brief and brand details, generate a detailed image prompt that will create compelling visual content for the campaign.
+
+  Creative Brief:
+  {system_prompt}
+
+  Brand Details:
+  - Brand: {brand_name}
+  - Product: {product_name}
+
+  Create an image prompt that:
+  1. Captures the essence of the creative brief
+  2. Maintains brand consistency
+  3. Highlights the product's key features
+  4. Appeals to the target audience
+  5. Follows the campaign's tone and messaging
+  6. Is optimized for the specified image generation model
+
+  The prompt should be detailed and specific, including:
+  - Visual style and composition
+  - Color palette and lighting
+  - Key elements to include
+  - Mood and atmosphere
+  - Technical specifications 
