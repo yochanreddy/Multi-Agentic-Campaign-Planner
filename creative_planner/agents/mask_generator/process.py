@@ -150,6 +150,14 @@ class MaskGenerator(BaseProcessNode):
         Returns:
             Dict[str, Any]: Updated state with the mask path
         """
+        print("\n" + "="*80)
+        print("🚀 STARTING MASK GENERATOR AGENT")
+        print("="*80)
+        print("📊 Initial State:")
+        for key, value in state.items():
+            print(f"  - {key}: {value}")
+        print("="*80 + "\n")
+
         logger.info("Starting mask generation...")
         logger.info(f"Current state keys: {list(state.keys())}")
 
@@ -180,10 +188,26 @@ class MaskGenerator(BaseProcessNode):
             logger.info(f"Mask path in state: {mask_path}")
 
             logger.info("Mask generated successfully")
+            
+            print("\n" + "="*80)
+            print("✅ COMPLETED MASK GENERATOR AGENT")
+            print("="*80)
+            print("📊 Final State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
+            
             return state
 
         except Exception as e:
             logger.exception("Error in mask generation process")
+            print("\n" + "="*80)
+            print("❌ ERROR IN MASK GENERATOR AGENT")
+            print("="*80)
+            print("📊 Error State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
             raise NyxAIException(
                 internal_code=7105,
                 message="Error generating mask",

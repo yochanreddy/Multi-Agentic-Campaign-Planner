@@ -121,6 +121,14 @@ class CTAGenerator(BaseProcessNode):
             
     async def process(self, state: State, config: Dict[str, Any]) -> Dict[str, Any]:
         """Process the state to generate headlines and CTA"""
+        print("\n" + "="*80)
+        print("🚀 STARTING CTA GENERATOR AGENT")
+        print("="*80)
+        print("📊 Initial State:")
+        for key, value in state.items():
+            print(f"  - {key}: {value}")
+        print("="*80 + "\n")
+        
         self.logger.info("Starting headlines and CTA generation process")
         self.logger.info(f"Current state keys: {list(state.keys())}")
         
@@ -151,10 +159,26 @@ class CTAGenerator(BaseProcessNode):
             self.logger.info(f"CTA generated: {result['cta']}")
             
             self.logger.info("Headlines and CTA generated successfully")
+            
+            print("\n" + "="*80)
+            print("✅ COMPLETED CTA GENERATOR AGENT")
+            print("="*80)
+            print("📊 Final State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
+            
             return state
             
         except Exception as e:
             self.logger.error(f"Error in headlines and CTA generation: {str(e)}")
+            print("\n" + "="*80)
+            print("❌ ERROR IN CTA GENERATOR AGENT")
+            print("="*80)
+            print("📊 Error State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
             raise NyxAIException(
                 internal_code=7105,
                 message="Error generating headlines and CTA",

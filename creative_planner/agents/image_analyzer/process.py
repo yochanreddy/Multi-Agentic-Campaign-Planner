@@ -23,7 +23,7 @@ class ImageAnalyzer(BaseProcessNode):
         self.analysis_threshold = config.get("analysis_threshold", 0.4)
         self.mask_threshold = config.get("mask_threshold", 0.3)
         self.timeout = config.get("timeout", 10.0)
-        self.alison_timeout = config.get("alison_timeout", 120.0)
+        self.alison_timeout = config.get("alison_timeout", 180.0)
         self.seed = config.get("seed", 42)
         self.alison_endpoint = get_required_env_var("ALISON_ANALYZE_ENDPOINT")
 
@@ -39,27 +39,43 @@ class ImageAnalyzer(BaseProcessNode):
             Dict[str, Any]: Updated state with analysis results and potentially new image
         """
         try:
+            print("\n" + "="*80)
+            print("🚀 STARTING IMAGE ANALYZER AGENT")
+            print("="*80)
+            print("📊 Initial State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
+
             logger.info("Starting image analysis...")
             logger.info(f"Current state keys: {list(state.keys())}")
-            logger.info(f"State contents: {state}")
             
             # Get the image path from state
             image_path = state.get("generated_image_path")
             if not image_path:
                 logger.error("No image path found in state")
                 logger.error(f"Available state keys: {list(state.keys())}")
+                print("\n" + "="*80)
+                print("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
+                print("="*80 + "\n")
                 return state
 
             # Get the category from state
             category = state.get("industry")
             if not category:
                 logger.error("No industry/category found in state")
+                print("\n" + "="*80)
+                print("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
+                print("="*80 + "\n")
                 return state
 
             # Analyze the image
             analysis_result = await self._analyze_image(category, image_path)
             if "error" in analysis_result:
                 logger.warning(f"Image analysis failed: {analysis_result['error']}")
+                print("\n" + "="*80)
+                print("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
+                print("="*80 + "\n")
                 return state
 
             # Check if regeneration is needed
@@ -71,6 +87,9 @@ class ImageAnalyzer(BaseProcessNode):
 
             if combined_similarity >= self.analysis_threshold:
                 logger.info("Image meets quality threshold, no regeneration needed")
+                print("\n" + "="*80)
+                print("✅ COMPLETED IMAGE ANALYZER AGENT")
+                print("="*80 + "\n")
                 return state
 
             # Generate refined prompt
@@ -91,29 +110,87 @@ class ImageAnalyzer(BaseProcessNode):
             }
             
             logger.info("Image regeneration completed successfully")
+
+            print("\n" + "="*80)
+            print("✅ COMPLETED IMAGE ANALYZER AGENT")
+            print("="*80)
+            print("📊 Final State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
+
             return state
 
         except Exception as e:
             logger.error(f"Error in image analysis process: {str(e)}")
+            print("\n" + "="*80)
+            print("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
+            print("="*80)
+            print("📊 Final State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
             return state
 
     async def _analyze_image(self, category: str, image_path: str) -> Dict[str, Any]:
         """Analyze the image using the Alison service"""
         try:
-            async with httpx.AsyncClient(timeout=self.alison_timeout) as client:
+            # Map industry to supported category
+            category_mapping = {
+                "Catering and Food Services": "food_and_beverages",
+                "Food Delivery": "food_and_beverages",
+                "Restaurant": "food_and_beverages",
+                "Retail": "ecommerce",
+                "Technology": "electronics",
+                "Finance": "finance_and_banking",
+                "Gaming": "gaming",
+                "Media": "entertainment_and_media",
+                "Automotive": "automobiles"
+            }
+            
+            # Get the mapped category or use the original if not found
+            mapped_category = category_mapping.get(category, category)
+            
+            # Prepare the base parameters
+            params = {"category": mapped_category}
+            logger.info(f"Using mapped category: {mapped_category} (original: {category})")
+            
+            # Create the client with proper timeout and redirect following
+            async with httpx.AsyncClient(timeout=self.alison_timeout, follow_redirects=True) as client:
+                # Check if file exists
+                if not os.path.isfile(image_path):
+                    logger.error(f"File '{image_path}' not found")
+                    return {"error": f"File '{image_path}' not found"}
+
+                # Open and send the image file
                 with open(image_path, "rb") as img:
                     files = {"image": (os.path.basename(image_path), img, "application/octet-stream")}
+                    logger.info(f"Sending request to {self.alison_endpoint}")
+                    logger.info(f"Request details:")
+                    logger.info(f"- Category: {mapped_category}")
+                    logger.info(f"- Image file: {os.path.basename(image_path)}")
+                    logger.info(f"- Content type: application/octet-stream")
+                    
                     response = await client.post(
                         self.alison_endpoint,
-                        params={
-                            "category": category,
-                            "mask_threshold": self.mask_threshold,
-                            "timeout": self.timeout
-                        },
+                        params=params,
                         files=files
                     )
+                
+                # Log response details
+                logger.info(f"Response status: {response.status_code}")
+                logger.info(f"Response headers: {response.headers}")
+                
+                # Check response status
                 response.raise_for_status()
-                return response.json()
+                result = response.json()
+                logger.info(f"API call successful. Response received")
+                return result
+                
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error analyzing image: {str(e)}")
+            logger.error(f"Response content: {e.response.text if hasattr(e, 'response') else 'No response content'}")
+            return {"error": f"HTTP error: {str(e)}"}
         except Exception as e:
             logger.error(f"Error analyzing image: {str(e)}")
             return {"error": str(e)}

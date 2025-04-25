@@ -69,6 +69,13 @@ class ImageGenerator(BaseProcessNode):
             return state
         except Exception as e:
             self.logger.error(f"Error in image generation: {str(e)}")
+            print("\n" + "="*80)
+            print("❌ ERROR IN IMAGE GENERATOR AGENT")
+            print("="*80)
+            print("📊 Error State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
             raise Exception(f"Failed to generate images: {str(e)}")
 
     def _download_image(self, model_name: str, prompt: str) -> str:

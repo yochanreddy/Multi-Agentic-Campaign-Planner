@@ -87,6 +87,14 @@ class TextLayeringProcess(BaseProcessNode):
 
     async def process(self, state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
         try:
+            print("\n" + "="*80)
+            print("🚀 STARTING TEXT LAYERING AGENT")
+            print("="*80)
+            print("📊 Initial State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
+
             self.logger.info("Starting text layering process...")
             self.logger.info(f"Current state keys: {list(state.keys())}")
 
@@ -143,11 +151,27 @@ class TextLayeringProcess(BaseProcessNode):
                 self.logger.info(f"Text layered image saved to: {output_path}")
                 self.logger.info("Text layering completed successfully")
                 
+                print("\n" + "="*80)
+                print("✅ COMPLETED TEXT LAYERING AGENT")
+                print("="*80)
+                print("📊 Final State:")
+                for key, value in state.items():
+                    print(f"  - {key}: {value}")
+                print("="*80 + "\n")
+                
                 return state
+                
             except requests.exceptions.HTTPError as e:
                 self.logger.error(f"HTTP error in text layering: {str(e)}")
                 if e.response is not None:
                     self.logger.error(f"Response content: {e.response.text}")
+                print("\n" + "="*80)
+                print("❌ ERROR IN TEXT LAYERING AGENT")
+                print("="*80)
+                print("📊 Error State:")
+                for key, value in state.items():
+                    print(f"  - {key}: {value}")
+                print("="*80 + "\n")
                 raise NyxAIException(
                     internal_code=2006,
                     message="Error calling Ideogram API",
@@ -156,6 +180,13 @@ class TextLayeringProcess(BaseProcessNode):
                 )
             except Exception as e:
                 self.logger.error(f"Error in text layering: {str(e)}")
+                print("\n" + "="*80)
+                print("❌ ERROR IN TEXT LAYERING AGENT")
+                print("="*80)
+                print("📊 Error State:")
+                for key, value in state.items():
+                    print(f"  - {key}: {value}")
+                print("="*80 + "\n")
                 raise NyxAIException(
                     internal_code=2500,
                     message="Unexpected error in text layering",
@@ -165,6 +196,13 @@ class TextLayeringProcess(BaseProcessNode):
 
         except Exception as e:
             self.logger.error(f"Error in text layering process: {str(e)}")
+            print("\n" + "="*80)
+            print("❌ ERROR IN TEXT LAYERING AGENT")
+            print("="*80)
+            print("📊 Error State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
             raise
 
     def _parse_response(self, response: AIMessage) -> Dict[str, Any]:

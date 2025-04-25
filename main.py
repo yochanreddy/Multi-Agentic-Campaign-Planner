@@ -129,6 +129,7 @@ class CreativeSubmitRequest(BaseModel):
     website: Optional[str] = Field(default=None, description="Full URL of the brand's or product's landing page")
     campaign_objective: str = Field(description="Primary marketing goal (e.g. 'Brand Awareness', 'Lead Generation', 'Sales Conversion')")
     integrated_ad_platforms: Optional[List[ChannelType]] = Field(default=None, description="Digital advertising platforms where campaigns will run")
+    industry: Optional[str] = Field(default=None, description="Business sector or market category (e.g. 'Retail', 'Technology', 'Healthcare')")
 
     class Config:
         json_schema_extra = {
@@ -139,7 +140,8 @@ class CreativeSubmitRequest(BaseModel):
                 "product_name": "UrbanBite Premium Subscription",
                 "product_description": "Our Premium Subscription offers 10 chef-curated meals per week, with options for breakfast, lunch, and dinner. Each meal is nutritionally balanced, comes with detailed macros, and can be customized for dietary preferences.",
                 "campaign_objective": "Lead Generation",
-                "integrated_ad_platforms": ["Meta", "Google", "LinkedIn"]
+                "integrated_ad_platforms": ["Meta", "Google", "LinkedIn"],
+                "industry": "Food Delivery"
             }
         }
 
