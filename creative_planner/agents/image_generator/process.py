@@ -5,7 +5,6 @@ from typing import Any, Dict
 from langchain_core.runnables import RunnableConfig
 from creative_planner.agents.base.process import BaseProcessNode
 from creative_planner.utils import get_module_logger, get_required_env_var
-from creative_planner.agents.image_generator.prompt import ImageGeneratorPrompt
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,6 @@ class ImageGenerator(BaseProcessNode):
             config (Dict[str, Any]): Configuration dictionary
         """
         super().__init__(config, model_name="gpt-4")
-        self.prompt = ImageGeneratorPrompt(config)
         self.logger = logger
 
     async def process(self, state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
@@ -36,32 +34,38 @@ class ImageGenerator(BaseProcessNode):
             Dict[str, Any]: Updated state with generated image paths
         """
         try:
+            print("\n" + "="*80)
+            print("🚀 STARTING IMAGE GENERATOR AGENT")
+            print("="*80)
+            print("📊 Initial State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
+
             self.logger.info("Starting image generation process")
             logger.info("Generating images from creative prompts...")
             logger.info(f"Current state keys: {list(state.keys())}")
             
-            # Get the image generation prompt template
-            prompt_template = self.prompt.get_prompt()
-            
-            # Format the prompt with state values
-            formatted_prompt = prompt_template.format(
-                system_prompt=state["system_prompt"],
-                brand_name=state["brand_name"],
-                product_name=state["product_name"]
-            )
-            
             # Generate the image using the specified model
             model_name = state.get("image_model", "Flux pro 1.1")
-            image_path = self._download_image(model_name, formatted_prompt)
+            image_path = self._download_image(model_name, state["system_prompt"])
             
-            # Update state with the generated image path and initial prompt
+            # Update state with the generated image path
             state["generated_image_path"] = image_path
-            state["initial_prompt"] = formatted_prompt
-            state["image_prompt"] = formatted_prompt
+            state["image_prompt"] = state["system_prompt"]
             
             logger.info(f"Updated state keys: {list(state.keys())}")
             logger.info(f"Image path in state: {state.get('generated_image_path')}")
             logger.info("Images generated successfully")
+
+            print("\n" + "="*80)
+            print("✅ COMPLETED IMAGE GENERATOR AGENT")
+            print("="*80)
+            print("📊 Final State:")
+            for key, value in state.items():
+                print(f"  - {key}: {value}")
+            print("="*80 + "\n")
+
             return state
         except Exception as e:
             self.logger.error(f"Error in image generation: {str(e)}")

@@ -1,28 +1,33 @@
+from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
-from typing import Dict, Any
 from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from creative_planner.utils import get_module_logger
 
+logger = get_module_logger()
 
 class BaseGraph(ABC):
-    """Base class for creative planner agent sub-graphs"""
+    """Base class for all workflow graphs"""
 
     def __init__(self, config: Dict[str, Any]):
+        """Initialize the graph with configuration"""
         self.config = config
+        self.graph = None
+        self.logger = get_module_logger()
 
     @abstractmethod
-    def _build_graph(self) -> StateGraph:
-        """Build the internal IPO graph structure"""
+    def _build_graph(self) -> Dict[str, Any]:
+        """Build the graph structure"""
         pass
 
     @abstractmethod
-    def get_input_schema(self) -> Any:
-        """Define input schema for the agent"""
+    def get_input_schema(self) -> Optional[Dict[str, Any]]:
+        """Get the input schema for the graph"""
         pass
 
     @abstractmethod
-    def get_output_schema(self) -> Any:
-        """Define output schema for the agent"""
+    def get_output_schema(self) -> Optional[Dict[str, Any]]:
+        """Get the output schema for the graph"""
         pass
 
     def get_compiled_graph(self) -> CompiledStateGraph:

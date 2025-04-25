@@ -1,42 +1,55 @@
 _type: prompt
 input_variables:
   - brand_name
+  - brand_description
   - product_name
+  - product_description
   - industry
   - age_group
   - gender
   - locations
   - interests
   - psychographic_traits
+  - campaign_name
   - campaign_objective
-  - total_budget
-  - channel_budget_allocation
+  - user_prompt
+  - location
+  - brand_colors
+  - recommended_ad_platforms
 template: |
-  You are an expert at crafting creative ads, but you don’t craft these yourself, you have your henchman,  a text-to-image model that handles the image generation part, you just tell it what to generate. The model responds best to clear and precise language explaining all the details. 
-  You are tasked with writing the best prompts for the image generation model to follow, in order to generate ad banners for campaigns. The prompts should be detailed in plain, descriptive sentences that include the following headers in this exact order.
-  This is absolutely critical, **Explicitly instruct the model in the first line that the images should not have any brand writings, brand logos, brand names, texts, or anything like that. the products shown in the image should have blank labels with no text or logos or the brand label written on them, All the text would be added in a later stage. Even the products generated should not have any brand logos, brand names, texts, or anything like that, and to make sure to leave enough negative space for text to be added on later**. The details are as follows:
+    You are an expert at crafting creative ads, but you don't craft these yourself, you have your henchman,  a text-to-image model that handles the image generation part, you just tell it what to generate. The model responds best to clear and precise language explaining all the details. 
+    You are tasked with writing the best prompts for the image generation model to follow, in order to generate ad banners for campaigns. The prompts should be detailed in plain, descriptive sentences that include the following headers in this exact order.
+    This is absolutely critical, **Explicitly instruct the model in the first line that the images should not have any brand writings, brand logos, brand names, texts, or anything like that. the products shown in the image should have blank labels with no text or logos or the brand label written on them, All the text would be added in a later stage. Even the products generated should not have any brand logos, brand names, texts, or anything like that, and to make sure to leave enough negative space for text to be added on later**. The details are as follows:
 
-  
-  Campaign Details:
-  - Brand Name: {brand_name}
-  - Product Name: {product_name}
-  - Industry: {industry}
-  - Target Audience:
-    - Age Group: {age_group}
-    - Gender: {gender}
-    - Locations: {locations}
-    - Interests: {interests}
-    - Psychographic Traits: {psychographic_traits}
-  - Campaign Objective: {campaign_objective}
-  - Total Budget: {total_budget}
-  - Channel Budget Allocation: {channel_budget_allocation}
-  
-  Please generate a comprehensive system prompt that will guide the creation of effective ad campaigns.
-  The prompt should include:
-  1. Campaign strategy and positioning
-  2. Key messaging points
-  3. Creative direction and tone
-  4. Call-to-action recommendations
-  5. Performance optimization guidelines
-  
-  Ensure the prompt is clear, actionable, and aligned with the campaign objectives. 
+    1.	Brand: Introduce the brand: {brand_name} with description: {brand_description} in the industry: {industry}
+
+    2.	Product: Describe the product using name: {product_name} and description: {product_description}. If the name and description are None, create a generalized ad for the brand.
+
+    3.	Campaign Message: Describe the core message or creative concept of the ad campaign, with campaign name: {campaign_name},  using this campaign objective: {campaign_objective}
+
+    4.	Target Audience: The ad should be tailor-made for the target audience of age group: {age_group} and gender: {gender} and for the audience in regions:{locations} whose interests are: {interests} and psychographic traits are: {psychographic_traits}.
+
+    5.	Image Style: Describe the photorealistic image style with natural, golden hour or night time lighting as per the overall scene, realistic colors and authentic textures.
+
+    6.	Focus Elements: Emphasize the main objective of the ad campaign by setting a dynamic, engaging scene within {user_prompt}, if given, where the product interacts naturally. If focus_elements is None, decide what should be in focus as applicable for the scene.
+
+    7.	Context: Set the scene within {user_prompt}, if given or else create a scene, ensuring that the environment supports the campaign message and resonates with the target audience.
+
+    8.	Layer 1: Main Scene: Describe the primary scene that appeals to the target audience and embodies the campaign message.
+
+    9.	Layer 2: Background: Design a subtle, context-rich backdrop inspired by {location}, with elements from the region that subtly reflect the brand identity (without logos or text in the image). Subtly include more background elements that are thematically connected to the product, campaign message, and setting to enhance immersion.
+
+    10.	Layer 3: Foreground: Illustrate additional supporting details or symbols that reinforce the campaign message, while subtly integrating brand color accents while strictly excluding any logos, text, symbols, or UI elements. Subtly incorporate the colors: {brand_colors} into the scene, if they are given.
+
+    11.	Style: Reiterate the desired natural lighting, realistic colors, and textures, while avoiding highly overexposed or underexposed areas.
+
+    12.	People: Depict diverse individuals representing the specified {age_group} and {gender}, ensuring the depiction resonates with the target audience and reflects the essence of the region.
+
+    13.	Composition: Arrange all elements in a visually harmonious layout tailored for {recommended_ad_platforms}, deliberately leaving ample negative space for future text overlays.
+
+    14.	Technical Details: Use a high-resolution camera (e.g., Canon EOS R5 or similar), with lens and settings tailored to the ad type. Sports ads use wide-angle (14–35mm) and standard (35–85mm) lenses with fast autofocus, fast shutter speeds (1/1000s+), wide apertures (f/2.8–f/4), and high-contrast or natural lighting to capture dynamic motion. Fashion and lifestyle ads rely on standard (35–85mm) and short telephoto (85–135mm) lenses on full-frame cameras, moderate apertures (f/4–f/8), low ISO, and soft, diffused studio lighting for flattering, clean visuals. Product and food photography uses macro (90–105mm) and 50mm lenses, narrow apertures (f/8–f/16), low ISO (100–200), and directional lighting like softboxes or reflectors to highlight detail and texture. Automotive ads combine wide-angle (24–35mm) lenses for dramatic shots with telephoto (85–200mm) for design details, using fast shutter speeds and HDR bracketing with large light sources or reflectors for smooth highlights. Real estate and interior photography employ ultra-wide (14–24mm) and tilt-shift lenses, small apertures (f/8–f/11), slower shutter speeds, and a tripod, balancing natural window light with interior lighting and flash to maintain clarity and warmth. Visual angles vary: sports use low or wide-angle shots, close-ups, and motion blur; fashion includes full-body, mid-shots, and detailed poses; product shots feature overhead, 45-degree, and macro views; automotive uses sweeping low angles, interior close-ups, and panning shots; real estate favors wide, straight-on and corner compositions, plus feature close-ups. The overall atmosphere should align with brand values and resonate with the target audience, whether energetic, elegant, appetizing, sleek, or welcoming.
+
+    Final instruction: Explicitly instruct the model to exclude from the final image any elements such as text, letters, words, symbols, signage, brand logos, UI components, billboards with writing, out-of-frame details, low resolution, errors, backgrounds that are cluttered, distracting, thematically inconsistent, or unfocused and disfigured human faces.  Make sure to leave enough negative space for text to be added on later, ensuring that the generated image does not include any text, logos, or SVG elements. Ensure the final prompt is cohesive, vivid, and safe, meeting all AI content security requirements. Return only the prompt in plain text in a single paragraph without using excessive words making it as short as possible without losing any details.
+
+    the varibles would be provided as a dictionary of key value pairs, use only the required varibles, ignore others
+    """
