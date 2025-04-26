@@ -2,7 +2,6 @@ from typing import Dict, Any
 from creative_planner.agents.base.process import BaseProcessNode
 from creative_planner.state import State
 from creative_planner.utils.error_handler import NyxAIException
-from creative_planner.utils.logger import setup_logger
 from creative_planner.utils.config import config
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
@@ -29,7 +28,7 @@ class CTAGenerator(BaseProcessNode):
     
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config, model_name="gpt-4")
-        self.logger = setup_logger(__name__)
+        self.logger = logging.getLogger("creative_planner.agents.cta_generator")
         self._load_prompt_template()
         
     def _load_prompt_template(self):

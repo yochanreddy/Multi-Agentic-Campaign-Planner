@@ -3,6 +3,9 @@ import yaml
 from langchain.prompts import PromptTemplate
 from langchain_community.chat_models import ChatOpenAI
 from creative_planner.state import State
+import logging
+
+logger = logging.getLogger("creative_planner.agents.prompt_generator")
 
 class PromptGenerator:
     """Class for generating creative prompts."""
@@ -26,13 +29,13 @@ class PromptGenerator:
         Returns:
             Dict[str, Any]: Updated state with generated prompts
         """
-        print("\n" + "="*80)
-        print("🚀 STARTING PROMPT GENERATOR AGENT")
-        print("="*80)
-        print("📊 Initial State:")
+        logger.info("\n" + "="*80)
+        logger.info("🚀 STARTING PROMPT GENERATOR AGENT")
+        logger.info("="*80)
+        logger.info("📊 Initial State:")
         for key, value in state.items():
-            print(f"  - {key}: {value}")
-        print("="*80 + "\n")
+            logger.info(f"  - {key}: {value}")
+        logger.info("="*80 + "\n")
 
         try:
             # Load the prompt template from YAML
@@ -56,33 +59,34 @@ class PromptGenerator:
             
             # Initialize the LLM
             llm = ChatOpenAI(
-                model_name="gpt-4-turbo-preview",
-                temperature=0.7
+                model_name="gpt-4",
+                temperature=0.5
             )
             
             # Generate the system prompt using the LLM
             response = llm.invoke(formatted_prompt)
             system_prompt = response.content
+            logger.info(f"System Prompt: {system_prompt}")
             
             # Update the state with the generated system prompt
             state["system_prompt"] = system_prompt
             
-            print("\n" + "="*80)
-            print("✅ COMPLETED PROMPT GENERATOR AGENT")
-            print("="*80)
-            print("📊 Final State:")
+            logger.info("\n" + "="*80)
+            logger.info("✅ COMPLETED PROMPT GENERATOR AGENT")
+            logger.info("="*80)
+            logger.info("📊 Final State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.info(f"  - {key}: {value}")
+            logger.info("="*80 + "\n")
             
             return state
             
         except Exception as e:
-            print("\n" + "="*80)
-            print("❌ ERROR IN PROMPT GENERATOR AGENT")
-            print("="*80)
-            print("📊 Error State:")
+            logger.error("\n" + "="*80)
+            logger.error("❌ ERROR IN PROMPT GENERATOR AGENT")
+            logger.error("="*80)
+            logger.error("📊 Error State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.error(f"  - {key}: {value}")
+            logger.error("="*80 + "\n")
             raise e 

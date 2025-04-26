@@ -7,18 +7,19 @@ import numpy as np
 from PIL import Image
 from transformers import AutoProcessor, CLIPSegForImageSegmentation
 from langchain_core.runnables.config import RunnableConfig
+import logging
 
 from creative_planner.agents.base.process import BaseProcessNode
 from creative_planner.state import State
 from creative_planner.utils.error_handler import NyxAIException
-from creative_planner.utils.logger import setup_logger
+
 from creative_planner.utils.config import config
 
-logger = setup_logger("mask_generator")
+logger = logging.getLogger("creative_planner.agents.mask_generator")
 
 # Set deterministic behavior for reproducibility
-torch.manual_seed(config.seed)
-np.random.seed(config.seed)
+torch.manual_seed(getattr(config, 'seed', 42))
+np.random.seed(getattr(config, 'seed', 42))
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -27,17 +28,24 @@ class MaskGenerator(BaseProcessNode):
     """Process implementation for mask generator agent"""
 
     def __init__(self, config: Dict[str, Any]):
-        super().__init__(config, model_name="clipseg")
-        self.config = config  # Store the config parameter
+        super().__init__(config)
+        self.config = config
         self._load_model()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def _load_model(self):
         """Load the CLIPSeg model and processor"""
         try:
             self.MODEL_NAME = "CIDAS/clipseg-rd64-refined"
-            self.processor = AutoProcessor.from_pretrained(self.MODEL_NAME)
-            self.model = CLIPSegForImageSegmentation.from_pretrained(self.MODEL_NAME)
+            # Load processor with the correct config file
+            self.processor = AutoProcessor.from_pretrained(
+                self.MODEL_NAME
+            )
+            # Load model
+            self.model = CLIPSegForImageSegmentation.from_pretrained(
+                self.MODEL_NAME
+            )
+            # Move model to appropriate device
+            # self.model = self.model.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         except Exception as e:
             logger.exception("Error loading CLIPSeg model or processor")
             raise NyxAIException(
@@ -56,7 +64,6 @@ class MaskGenerator(BaseProcessNode):
     ) -> str:
         """
         Generates a binary segmentation mask for a given image and text prompt.
-        The mask will be in RGB format with only black (0,0,0) and white (255,255,255) pixels.
         """
         logger.info(f"Generating mask for prompt '{text_prompt}' on image: {image_path}")
 
@@ -86,47 +93,19 @@ class MaskGenerator(BaseProcessNode):
                 outputs = self.model(**inputs)
 
             # Post-processing
+            
             probs = outputs.logits.unsqueeze(1).sigmoid()[0, 0].cpu().numpy()
-            
-            # Create binary mask with strict thresholding
-            mask = (probs < threshold).astype(np.uint8) * 255
-            
-            # Handle different mask shapes
-            if len(mask.shape) == 1:
-                # For 1D array, reshape to square
-                size = int(np.sqrt(mask.shape[0]))
-                if size * size != mask.shape[0]:
-                    logger.warning(f"Mask size {mask.shape[0]} is not a perfect square, padding to next square")
-                    size = int(np.ceil(np.sqrt(mask.shape[0])))
-                    padded_size = size * size
-                    mask = np.pad(mask, (0, padded_size - mask.shape[0]), mode='constant', constant_values=0)
-                mask = mask.reshape(size, size)
-            elif len(mask.shape) > 2:
-                # For higher dimensions, take the last two dimensions
-                mask = mask.reshape(mask.shape[-2], mask.shape[-1])
-            
-            # Create RGB mask with only black and white pixels
-            mask_rgb = np.zeros((mask.shape[0], mask.shape[1], 3), dtype=np.uint8)
-            mask_rgb[mask == 0] = [255, 255, 255]  # Background is white
-            mask_rgb[mask == 255] = [0, 0, 0]      # Foreground is black
-            
-            # Create mask image and resize
-            mask_img = Image.fromarray(mask_rgb)
-            mask_resized = mask_img.resize((orig_w, orig_h), resample=Image.NEAREST)
-            
-            # Verify the mask contains only black and white pixels
-            mask_array = np.array(mask_resized)
-            unique_colors = np.unique(mask_array.reshape(-1, 3), axis=0)
-            if len(unique_colors) > 2:
-                logger.warning("Mask contains non-binary colors, forcing to black and white")
-                mask_array = np.where(mask_array > 127, 255, 0).astype(np.uint8)
-                mask_resized = Image.fromarray(mask_array)
+            mask = (probs < threshold).astype(np.uint8)
 
-            # Save the mask
+            mask_img = Image.fromarray((mask * 255).astype(np.uint8))
+            mask_resized = mask_img.resize((orig_w, orig_h), resample=Image.NEAREST)
+
             tmpdir = tempfile.mkdtemp(prefix=f"{model_name.lower().replace(' ', '_')}_")
             filename = os.path.splitext(os.path.basename(image_path))[0] + f"_mask.{save_format.lower()}"
             out_path = os.path.join(tmpdir, filename)
             mask_resized.save(out_path, format=save_format.upper())
+            
+            logger.info(f"Image at: {image_path}")
 
             logger.info(f"Mask saved at: {out_path}")
             return out_path
@@ -150,17 +129,16 @@ class MaskGenerator(BaseProcessNode):
         Returns:
             Dict[str, Any]: Updated state with the mask path
         """
-        print("\n" + "="*80)
-        print("🚀 STARTING MASK GENERATOR AGENT")
-        print("="*80)
-        print("📊 Initial State:")
+        logger.info("\n" + "="*80)
+        logger.info("🚀 STARTING MASK GENERATOR AGENT")
+        logger.info("="*80)
+        logger.info("📊 Initial State:")
         for key, value in state.items():
-            print(f"  - {key}: {value}")
-        print("="*80 + "\n")
+            logger.info(f"  - {key}: {value}")
+        logger.info("="*80 + "\n")
 
         logger.info("Starting mask generation...")
-        logger.info(f"Current state keys: {list(state.keys())}")
-
+        
         try:
             # Get the image path from state
             image_path = state.get("generated_image_path")
@@ -173,6 +151,8 @@ class MaskGenerator(BaseProcessNode):
 
             # Get threshold from config
             threshold = float(self.config.get("mask_threshold", 0.3))
+            logger.info(f"Threshold: {threshold}")
+            # threshold = 0.1
 
             # Generate mask
             mask_path = await self._generate_mask(
@@ -189,25 +169,25 @@ class MaskGenerator(BaseProcessNode):
 
             logger.info("Mask generated successfully")
             
-            print("\n" + "="*80)
-            print("✅ COMPLETED MASK GENERATOR AGENT")
-            print("="*80)
-            print("📊 Final State:")
+            logger.info("\n" + "="*80)
+            logger.info("✅ COMPLETED MASK GENERATOR AGENT")
+            logger.info("="*80)
+            logger.info("📊 Final State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.info(f"  - {key}: {value}")
+            logger.info("="*80 + "\n")
             
             return state
 
         except Exception as e:
             logger.exception("Error in mask generation process")
-            print("\n" + "="*80)
-            print("❌ ERROR IN MASK GENERATOR AGENT")
-            print("="*80)
-            print("📊 Error State:")
+            logger.error("\n" + "="*80)
+            logger.error("❌ ERROR IN MASK GENERATOR AGENT")
+            logger.error("="*80)
+            logger.error("📊 Error State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.error(f"  - {key}: {value}")
+            logger.error("="*80 + "\n")
             raise NyxAIException(
                 internal_code=7105,
                 message="Error generating mask",

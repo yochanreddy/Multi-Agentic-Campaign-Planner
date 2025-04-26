@@ -32,4 +32,5 @@ class State(MessagesState):
     generated_mask_path: Annotated[str, "Path to the generated mask file"]
     headline: Annotated[str, "Generated headline for the ad"]
     subheadline: Annotated[str, "Generated subheadline for the ad"]
-    cta: Annotated[str, "Generated call-to-action text"] 
+    cta: Annotated[str, "Generated call-to-action text"]
+    user_prompt: Annotated[str, "Optional user-provided creative direction or specific requirements for the campaign"] 

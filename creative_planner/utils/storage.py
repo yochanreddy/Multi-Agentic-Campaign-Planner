@@ -5,12 +5,13 @@ from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, g
 from datetime import datetime, timedelta
 from creative_planner.utils.error_handler import NyxAIException
 from creative_planner.utils.utils import get_required_env_var
-from creative_planner.utils.logger import get_logger
+
 from google.auth import exceptions
 from google import auth
 from google.auth.transport import requests
+import logging
 
-logger = get_logger(__name__)
+logger = logging.getLogger("creative_planner.utils.storage")
 
 def save_image_to_azure(image_data, blob_name):
     """Save image to Azure Blob Storage."""

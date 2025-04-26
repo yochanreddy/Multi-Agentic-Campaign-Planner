@@ -7,7 +7,7 @@ from creative_planner.agents.base.process import BaseProcessNode
 from creative_planner.utils import get_module_logger, get_required_env_var
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("creative_planner.agents.image_generator")
 
 class ImageGenerator(BaseProcessNode):
     """Process node for generating images from creative prompts"""
@@ -34,13 +34,13 @@ class ImageGenerator(BaseProcessNode):
             Dict[str, Any]: Updated state with generated image paths
         """
         try:
-            print("\n" + "="*80)
-            print("🚀 STARTING IMAGE GENERATOR AGENT")
-            print("="*80)
-            print("📊 Initial State:")
+            logger.info("\n" + "="*80)
+            logger.info("🚀 STARTING IMAGE GENERATOR AGENT")
+            logger.info("="*80)
+            logger.info("📊 Initial State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.info(f"  - {key}: {value}")
+            logger.info("="*80 + "\n")
 
             self.logger.info("Starting image generation process")
             logger.info("Generating images from creative prompts...")
@@ -58,24 +58,24 @@ class ImageGenerator(BaseProcessNode):
             logger.info(f"Image path in state: {state.get('generated_image_path')}")
             logger.info("Images generated successfully")
 
-            print("\n" + "="*80)
-            print("✅ COMPLETED IMAGE GENERATOR AGENT")
-            print("="*80)
-            print("📊 Final State:")
+            logger.info("\n" + "="*80)
+            logger.info("✅ COMPLETED IMAGE GENERATOR AGENT")
+            logger.info("="*80)
+            logger.info("📊 Final State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.info(f"  - {key}: {value}")
+            logger.info("="*80 + "\n")
 
             return state
         except Exception as e:
             self.logger.error(f"Error in image generation: {str(e)}")
-            print("\n" + "="*80)
-            print("❌ ERROR IN IMAGE GENERATOR AGENT")
-            print("="*80)
-            print("📊 Error State:")
+            logger.error("\n" + "="*80)
+            logger.error("❌ ERROR IN IMAGE GENERATOR AGENT")
+            logger.error("="*80)
+            logger.error("📊 Error State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.error(f"  - {key}: {value}")
+            logger.error("="*80 + "\n")
             raise Exception(f"Failed to generate images: {str(e)}")
 
     def _download_image(self, model_name: str, prompt: str) -> str:

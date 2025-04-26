@@ -5,8 +5,9 @@ from langchain_core.runnables import RunnableConfig
 from creative_planner.agents.base.process import BaseProcessNode
 from creative_planner.utils import get_module_logger, get_required_env_var
 from creative_planner.agents.image_analyzer.prompt import ImageAnalyzerPrompt
+import logging
 
-logger = get_module_logger(__name__)
+logger = logging.getLogger("creative_planner.agents.image_analyzer")
 
 class ImageAnalyzer(BaseProcessNode):
     """Process node for analyzing and potentially regenerating images"""
@@ -39,13 +40,13 @@ class ImageAnalyzer(BaseProcessNode):
             Dict[str, Any]: Updated state with analysis results and potentially new image
         """
         try:
-            print("\n" + "="*80)
-            print("🚀 STARTING IMAGE ANALYZER AGENT")
-            print("="*80)
-            print("📊 Initial State:")
+            logger.info("\n" + "="*80)
+            logger.info("🚀 STARTING IMAGE ANALYZER AGENT")
+            logger.info("="*80)
+            logger.info("📊 Initial State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.info(f"  - {key}: {value}")
+            logger.info("="*80 + "\n")
 
             logger.info("Starting image analysis...")
             logger.info(f"Current state keys: {list(state.keys())}")
@@ -55,27 +56,27 @@ class ImageAnalyzer(BaseProcessNode):
             if not image_path:
                 logger.error("No image path found in state")
                 logger.error(f"Available state keys: {list(state.keys())}")
-                print("\n" + "="*80)
-                print("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
-                print("="*80 + "\n")
+                logger.error("\n" + "="*80)
+                logger.error("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
+                logger.error("="*80 + "\n")
                 return state
 
             # Get the category from state
             category = state.get("industry")
             if not category:
                 logger.error("No industry/category found in state")
-                print("\n" + "="*80)
-                print("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
-                print("="*80 + "\n")
+                logger.error("\n" + "="*80)
+                logger.error("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
+                logger.error("="*80 + "\n")
                 return state
 
             # Analyze the image
             analysis_result = await self._analyze_image(category, image_path)
             if "error" in analysis_result:
                 logger.warning(f"Image analysis failed: {analysis_result['error']}")
-                print("\n" + "="*80)
-                print("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
-                print("="*80 + "\n")
+                logger.error("\n" + "="*80)
+                logger.error("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
+                logger.error("="*80 + "\n")
                 return state
 
             # Check if regeneration is needed
@@ -87,9 +88,9 @@ class ImageAnalyzer(BaseProcessNode):
 
             if combined_similarity >= self.analysis_threshold:
                 logger.info("Image meets quality threshold, no regeneration needed")
-                print("\n" + "="*80)
-                print("✅ COMPLETED IMAGE ANALYZER AGENT")
-                print("="*80 + "\n")
+                logger.info("\n" + "="*80)
+                logger.info("✅ COMPLETED IMAGE ANALYZER AGENT")
+                logger.info("="*80 + "\n")
                 return state
 
             # Generate refined prompt
@@ -111,49 +112,63 @@ class ImageAnalyzer(BaseProcessNode):
             
             logger.info("Image regeneration completed successfully")
 
-            print("\n" + "="*80)
-            print("✅ COMPLETED IMAGE ANALYZER AGENT")
-            print("="*80)
-            print("📊 Final State:")
+            logger.info("\n" + "="*80)
+            logger.info("✅ COMPLETED IMAGE ANALYZER AGENT")
+            logger.info("="*80)
+            logger.info("📊 Final State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.info(f"  - {key}: {value}")
+            logger.info("="*80 + "\n")
 
             return state
 
         except Exception as e:
             logger.error(f"Error in image analysis process: {str(e)}")
-            print("\n" + "="*80)
-            print("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
-            print("="*80)
-            print("📊 Final State:")
+            logger.error("\n" + "="*80)
+            logger.error("❌ COMPLETED IMAGE ANALYZER AGENT (ERROR)")
+            logger.error("="*80)
+            logger.error("📊 Final State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                logger.error(f"  - {key}: {value}")
+            logger.error("="*80 + "\n")
             return state
 
     async def _analyze_image(self, category: str, image_path: str) -> Dict[str, Any]:
         """Analyze the image using the Alison service"""
         try:
-            # Map industry to supported category
-            category_mapping = {
-                "Catering and Food Services": "food_and_beverages",
-                "Food Delivery": "food_and_beverages",
-                "Restaurant": "food_and_beverages",
-                "Retail": "ecommerce",
-                "Technology": "electronics",
-                "Finance": "finance_and_banking",
-                "Gaming": "gaming",
-                "Media": "entertainment_and_media",
-                "Automotive": "automobiles"
-            }
+            logger.info("inital category: %s", category)
+            # Use LLM to map industry to supported category
+            mapping_prompt = f"""
+            Map the following industry to one of these supported categories:
+            ["automobiles","electronics","finance_and_banking","ecommerce","entertainment_and_media","food_and_beverages","gaming"]
+
+            Industry to map: {category}
+
+            Return only the mapped category name, nothing else.
+            """
             
-            # Get the mapped category or use the original if not found
-            mapped_category = category_mapping.get(category, category)
+            # Get the mapped category using LLM
+            response = await self.model.ainvoke(mapping_prompt)
+            mapped_category = response.content.strip().lower()
+            
+            # Validate the mapped category
+            supported_categories = [
+                "automobiles", "electronics", "finance_and_banking", 
+                "ecommerce", "entertainment_and_media", "food_and_beverages", 
+                "gaming"
+            ]
+            
+            if mapped_category not in supported_categories:
+                logger.warning(f"LLM returned unsupported category: {mapped_category}")
+                # Default to ecommerce if mapping fails
+                mapped_category = "ecommerce"
+            
+            logger.info(f"Using mapped category: {mapped_category} (original: {category})")
+
+            logger.info("mapped category: %s", mapped_category)
             
             # Prepare the base parameters
             params = {"category": mapped_category}
-            logger.info(f"Using mapped category: {mapped_category} (original: {category})")
             
             # Create the client with proper timeout and redirect following
             async with httpx.AsyncClient(timeout=self.alison_timeout, follow_redirects=True) as client:

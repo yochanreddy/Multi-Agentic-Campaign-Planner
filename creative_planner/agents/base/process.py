@@ -7,15 +7,15 @@ from langchain.prompts import load_prompt, PromptTemplate
 from creative_planner.utils import get_module_logger, Generator
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.runnables import Runnable
-from creative_planner.utils.logger import setup_logger
-from creative_planner.exceptions.exceptions import NyxAIException
+from creative_planner.utils.error_handler import NyxAIException
 from creative_planner.state import State
 from langchain_core.language_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
+import logging
 
-logger = setup_logger("base_process")
+logger = logging.getLogger("creative_planner.agents.base_process")
 
 
 class BaseProcessNode(Runnable, ABC):
