@@ -1,20 +1,12 @@
 from typing import Dict, Any
 from langchain_core.runnables import RunnableConfig
 from creative_planner.agents.base.process import BaseProcessNode
-from creative_planner.agents.text_layering.prompt import TextLayeringPrompt
 import os
 import requests
-import uuid
-from creative_planner.utils.storage import save_image, get_signed_url
 from creative_planner.utils import get_required_env_var
 import logging
 from creative_planner.utils.logging_config import configure_logging
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import AIMessage
 from creative_planner.utils.error_handler import NyxAIException
-import base64
-from PIL import Image
-import io
 
 # Configure logging
 configure_logging()
@@ -44,8 +36,7 @@ def generate_image(prompt: str, image_path: str, mask_path: str) -> str:
         }
         data = {
             "prompt": prompt,
-            "model": "V_2",
-            "negative_prompt": "text, watermark, logo, signature, writing, letters, words"
+            "model": "V_2"
         }
         
         # Make the request
@@ -77,12 +68,6 @@ def generate_image(prompt: str, image_path: str, mask_path: str) -> str:
 class TextLayeringProcess(BaseProcessNode):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.prompt = TextLayeringPrompt()
-        self.llm = ChatOpenAI(
-            model_name="gpt-4",
-            temperature=0.7,
-            api_key=config.get("openai_api_key")
-        )
         self.logger = logger
 
     async def process(self, state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
@@ -126,17 +111,8 @@ class TextLayeringProcess(BaseProcessNode):
             if not cta:
                 cta = "Shop Now"
 
-            # Generate the prompt
-            prompt = self.prompt.get_prompt(headline, subheadline, cta, image_path)
-
-            # Get the LLM response for text styling
-            response = await self.llm.ainvoke(prompt)
-
-            # Parse the response to get text positioning and styling
-            text_config = self._parse_response(response)
-
             # Format the text overlay prompt
-            overlay_prompt = self._format_overlay_prompt(headline, subheadline, cta, text_config)
+            overlay_prompt = f"Add only the following text within the double quotes, directly onto the image, with no background, no box, no shadow, and no extra design elements:\nHeadline: \"{headline}\"\nSubheadline: \"{subheadline or ''}\"\nCTA: \"{cta}\"\nOnly include this text. Do not add any other characters, words, or symbols, Leave the rest of the space blank."
             
             self.logger.info(f"Generated overlay prompt: {overlay_prompt}")
             self.logger.info(f"Using image path: {image_path}")
@@ -203,66 +179,4 @@ class TextLayeringProcess(BaseProcessNode):
             for key, value in state.items():
                 logger.error(f"  - {key}: {value}")
             logger.error("="*80 + "\n")
-            raise
-
-    def _parse_response(self, response: AIMessage) -> Dict[str, Any]:
-        """Parse the LLM response to extract text positioning and styling"""
-        try:
-            # Extract content from AIMessage
-            content = response.content if hasattr(response, 'content') else str(response)
-            
-            # Parse the response to extract text positioning and styling
-            lines = content.split('\n')
-            config = {}
-            for line in lines:
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    config[key.strip()] = value.strip()
-            
-            # Set default values if missing
-            config.setdefault('headline_color', 'white')
-            config.setdefault('headline_size', '60')
-            config.setdefault('headline_x', 'center')
-            config.setdefault('headline_y', 'top')
-            
-            config.setdefault('subheadline_color', 'white')
-            config.setdefault('subheadline_size', '40')
-            config.setdefault('subheadline_x', 'center')
-            config.setdefault('subheadline_y', 'middle')
-            
-            config.setdefault('cta_color', 'white')
-            config.setdefault('cta_size', '50')
-            config.setdefault('cta_x', 'center')
-            config.setdefault('cta_y', 'bottom')
-            
-            return config
-        except Exception as e:
-            self.logger.error(f"Error parsing LLM response: {str(e)}")
-            # Return default configuration if parsing fails
-            return {
-                'headline_color': 'white', 'headline_size': '60', 'headline_x': 'center', 'headline_y': 'top',
-                'subheadline_color': 'white', 'subheadline_size': '40', 'subheadline_x': 'center', 'subheadline_y': 'middle',
-                'cta_color': 'white', 'cta_size': '50', 'cta_x': 'center', 'cta_y': 'bottom'
-            }
-
-    def _format_overlay_prompt(self, headline: str, subheadline: str, cta: str, text_config: Dict[str, Any]) -> str:
-        """Format the prompt for Ideogram text overlay"""
-        # Combine text elements with their styling
-        prompt_parts = []
-        if headline:
-            headline_style = f"color: {text_config.get('headline_color', 'white')}, size: {text_config.get('headline_size', '60')}"
-            prompt_parts.append(f"Headline '{headline}' at position {text_config.get('headline_x', 'center')},{text_config.get('headline_y', 'top')} with {headline_style}")
-        
-        if subheadline:
-            subheadline_style = f"color: {text_config.get('subheadline_color', 'white')}, size: {text_config.get('subheadline_size', '40')}"
-            prompt_parts.append(f"Subheadline '{subheadline}' at position {text_config.get('subheadline_x', 'center')},{text_config.get('subheadline_y', 'middle')} with {subheadline_style}")
-        
-        if cta:
-            cta_style = f"color: {text_config.get('cta_color', 'white')}, size: {text_config.get('cta_size', '50')}"
-            prompt_parts.append(f"CTA '{cta}' at position {text_config.get('cta_x', 'center')},{text_config.get('cta_y', 'bottom')} with {cta_style}")
-        
-        # Ensure we have at least one text element
-        if not prompt_parts:
-            prompt_parts.append("Add a simple text overlay with the brand name")
-        
-        return ". ".join(prompt_parts) 
+            raise 

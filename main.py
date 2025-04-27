@@ -80,29 +80,27 @@ async def lifespan(app: FastAPI):
 
 
 class CampaignSubmitRequest(BaseModel):
-    brand_description: str = Field(description="Comprehensive description of the brand's identity, values and market positioning")
-    brand_name: str = Field(description="Official registered name of the brand or company")
-    campaign_objective: str = Field(description="Primary marketing goal (e.g. 'Brand Awareness', 'Lead Generation', 'Sales Conversion')")
-    
-    # Optional demographic fields
-    age_group: Optional[str] = Field(default=None, description="Target demographic age range (e.g. '18-24', '25-34', '35-44')")
-    gender: Optional[str] = Field(default=None, description="Target audience gender identity ('Male', 'Female', 'All')")
-    industry: Optional[str] = Field(default=None, description="Business sector or market category (e.g. 'Retail', 'Technology', 'Healthcare')")
-    interests: Optional[List[str]] = Field(default=None, description="Specific hobbies, activities and topics that appeal to the target audience")
-    locations: Optional[List[str]] = Field(default=None, description="Geographic targeting areas including cities, regions or countries")
-    campaign_name: Optional[str] = Field(default=None, description="A unique campaign identifier combining brand, timing, audience, and theme elements separated by underscores")
-    psychographic_traits: Optional[List[str]] = Field(default=None, description="Psychological and behavioral characteristics of target audience (e.g. 'Environmentally conscious', 'Tech-savvy', 'Health-oriented')")
-    
-    # Other optional fields
-    product_description: Optional[str] = Field(default=None, description="Detailed explanation of product features, benefits and unique selling points")
-    product_name: Optional[str] = Field(default=None, description="Specific name or model of the product being advertised")
-    website: Optional[str] = Field(default=None, description="Full URL of the brand's or product's landing page")
-    integrated_ad_platforms: Optional[List] = Field(default=None, description="Digital advertising platforms where campaigns will run (e.g. 'Meta', 'Google', 'LinkedIn', 'TikTok')")
-    recommended_ad_platforms: Optional[List] = Field(default=None, description="Recommended Digital advertising platforms integrated with the platform where campaigns will run")
-    campaign_start_date: Optional[str] = Field(default=None, description="Starting date of the marketing campaign (format: DD-MM-YYYY)")
-    campaign_end_date: Optional[str] = Field(default=None, description="Ending date of the marketing campaign (format: DD-MM-YYYY)")
-    total_budget: Optional[float] = Field(default=None, description="The total daily budget predicted to run a campaign based on the previous outputs")
-    channel_budget_allocation: Optional[dict] = Field(default=None, description="A dictionary with the recommended channel names as keys and their respective daily budget allocations in INR")
+    brand_description: str = Field(
+        description="Comprehensive description of the brand's identity, values and market positioning"
+    )
+    brand_name: str = Field(
+        description="Official registered name of the brand or company"
+    )
+    product_description: str = Field(
+        description="Detailed explanation of product features, benefits and unique selling points"
+    )
+    product_name: str = Field(
+        description="Specific name or model of the product being advertised"
+    )
+    website: str = Field(
+        description="Full URL of the brand's or product's landing page"
+    )
+    campaign_objective: str = Field(
+        description="Primary marketing goal (e.g. 'Brand Awareness', 'Lead Generation', 'Sales Conversion')"
+    )
+    integrated_ad_platforms: List[ChannelType] = Field(
+        description="Digital advertising platforms where campaigns will run (e.g. 'Meta', 'Google', 'LinkedIn', 'TikTok')"
+    )
 
     class Config:
         json_schema_extra = {
@@ -113,14 +111,7 @@ class CampaignSubmitRequest(BaseModel):
                 "product_name": "Zepto Cafe",
                 "product_description": "Zepto Cafe is a 10-minute food delivery service offering a diverse menu of freshly prepared snacks, beverages, and meals, combining speed and quality to cater to fast-paced urban lifestyles.",
                 "campaign_objective": "Increase Brand Awareness",
-                "integrated_ad_platforms": ["Meta", "Google"],
-                "industry": "Food Delivery",
-                "age_group": "18-34",
-                "gender": "All",
-                "interests": ["Food & Beverage", "Quick Service", "Urban Lifestyle"],
-                "locations": ["Mumbai", "Delhi", "Bangalore"],
-                "psychographic_traits": ["Time-conscious", "Quality-focused", "Tech-savvy"],
-                "campaign_name": "Zepto_Cafe_Summer_2024"
+                "integrated_ad_platforms": ["Meta", "Google"]
             }
         }
 
@@ -188,26 +179,66 @@ class StatusResponse(BaseModel):
 
 
 class CampaignResultResponse(BaseModel):
-    """Response model for getting campaign plan results"""
-    age_group: str = Field(description="Target demographic age range (e.g. '18-24', '25-34', '35-44')")
-    brand_description: str = Field(description="Comprehensive description of the brand's identity, values and market positioning")
-    brand_name: str = Field(description="Official registered name of the brand or company")
-    campaign_objective: str = Field(description="Primary marketing goal (e.g. 'Brand Awareness', 'Lead Generation', 'Sales Conversion')")
-    gender: str = Field(description="Target audience gender identity ('Male', 'Female', 'All')")
-    industry: str = Field(description="Business sector or market category (e.g. 'Retail', 'Technology', 'Healthcare')")
-    interests: List[str] = Field(description="Specific hobbies, activities and topics that appeal to the target audience")
-    locations: List[str] = Field(description="Geographic targeting areas including cities, regions or countries")
-    product_description: str = Field(description="Detailed explanation of product features, benefits and unique selling points")
-    product_name: str = Field(description="Specific name or model of the product being advertised")
-    psychographic_traits: List[str] = Field(description="Psychological and behavioral characteristics of target audience (e.g. 'Environmentally conscious', 'Tech-savvy', 'Health-oriented')")
-    website: str = Field(description="Full URL of the brand's or product's landing page")
-    integrated_ad_platforms: List[str] = Field(description="Digital advertising platforms where campaigns will run (e.g. 'Meta', 'Google', 'LinkedIn', 'TikTok')")
-    recommended_ad_platforms: List[str] = Field(description="Recommended Digital advertising platforms integrated with the platform where campaigns will run")
-    campaign_name: str = Field(description="A unique campaign identifier combining brand, timing, audience, and theme elements separated by underscores")
-    campaign_start_date: str = Field(description="Starting date of the marketing campaign (format: DD-MM-YYYY)")
-    campaign_end_date: str = Field(description="Ending date of the marketing campaign (format: DD-MM-YYYY)")
-    total_budget: float = Field(description="The total daily budget predicted to run a campaign based on the previous outputs")
-    channel_budget_allocation: dict = Field(description="A dictionary with the recommended channel names as keys and their respective daily budget allocations in INR")
+    age_group: str = Field(
+        description="Target demographic age range (e.g. '18-24', '25-34', '35-44')"
+    )
+    brand_description: str = Field(
+        description="Comprehensive description of the brand's identity, values and market positioning"
+    )
+    brand_name: str = Field(
+        description="Official registered name of the brand or company"
+    )
+    campaign_objective: str = Field(
+        description="Primary marketing goal (e.g. 'Brand Awareness', 'Lead Generation', 'Sales Conversion')"
+    )
+    gender: str = Field(
+        description="Target audience gender identity ('Male', 'Female', 'All')"
+    )
+    industry: str = Field(
+        description="Business sector or market category (e.g. 'Retail', 'Technology', 'Healthcare')"
+    )
+    interests: List[str] = Field(
+        description="Specific hobbies, activities and topics that appeal to the target audience"
+    )
+    locations: List[str] = Field(
+        description="Geographic targeting areas including cities, regions or countries"
+    )
+    product_description: str = Field(
+        description="Detailed explanation of product features, benefits and unique selling points"
+    )
+    product_name: str = Field(
+        description="Specific name or model of the product being advertised"
+    )
+    psychographic_traits: List[str] = Field(
+        description="Psychological and behavioral characteristics of target audience (e.g. 'Environmentally conscious', 'Tech-savvy', 'Health-oriented')"
+    )
+    website: str = Field(
+        description="Full URL of the brand's or product's landing page"
+    )
+    integrated_ad_platforms: List[str] = Field(
+        description="Digital advertising platforms where campaigns will run (e.g. 'Meta', 'Google', 'LinkedIn', 'TikTok')"
+    )
+    recommended_ad_platforms: List[str] = Field(
+        description="Recommended Digital advertising platforms integrated with the platform where campaigns will run"
+    )
+    campaign_name: str = Field(
+        description="A unique campaign identifier combining brand, timing, audience, and theme elements separated by underscores"
+    )
+    campaign_start_date: str = Field(
+        description="Starting date of the marketing campaign (format: DD-MM-YYYY)"
+    )
+    campaign_end_date: str = Field(
+        description="Ending date of the marketing campaign (format: DD-MM-YYYY)"
+    )
+    total_budget: float = Field(
+        description="The total daily budget predicted to run a campaign based on the previous outputs"
+    )
+    channel_budget_allocation: dict = Field(
+        description="A dictionary with the recommended channel names as keys and their respective daily budget allocations in INR",
+    )
+
+    class Config:
+        extra = "ignore"
 
 
 class CreativeResultResponse(BaseModel):
