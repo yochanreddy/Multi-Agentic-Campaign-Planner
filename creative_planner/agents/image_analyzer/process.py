@@ -6,6 +6,11 @@ from creative_planner.agents.base.process import BaseProcessNode
 from creative_planner.utils import get_module_logger, get_required_env_var
 from creative_planner.agents.image_analyzer.prompt import ImageAnalyzerPrompt
 import logging
+from pathlib import Path
+import yaml
+from langchain.prompts import PromptTemplate
+import requests
+import tempfile
 
 logger = logging.getLogger("creative_planner.agents.image_analyzer")
 
@@ -21,7 +26,8 @@ class ImageAnalyzer(BaseProcessNode):
         """
         super().__init__(config, model_name="gpt-4")
         self.prompt = ImageAnalyzerPrompt(config)
-        self.analysis_threshold = config.get("analysis_threshold", 0.4)
+        # self.analysis_threshold = config.get("analysis_threshold", 0.4)
+        self.analysis_threshold = 0.4
         self.mask_threshold = config.get("mask_threshold", 0.3)
         self.timeout = config.get("timeout", 10.0)
         self.alison_timeout = config.get("alison_timeout", 180.0)
@@ -86,29 +92,33 @@ class ImageAnalyzer(BaseProcessNode):
                 .get("combined_similarity", 0)
             )
 
-            if combined_similarity >= self.analysis_threshold:
+            logger.info("combined_similarity: %s", combined_similarity)
+            logger.info("analysis_threshold: %s", self.analysis_threshold)
+
+            # if combined_similarity >= self.analysis_threshold:
+            if combined_similarity >= 1:
                 logger.info("Image meets quality threshold, no regeneration needed")
                 logger.info("\n" + "="*80)
                 logger.info("✅ COMPLETED IMAGE ANALYZER AGENT")
                 logger.info("="*80 + "\n")
                 return state
+            else:
+                logger.info("Image does not meet quality threshold, regenerating...")
 
             # Generate refined prompt
             refined_prompt = await self._generate_refined_prompt(state, analysis_result)
             
+            logger.info("refined_prompt: %s", refined_prompt)
             # Regenerate image with refined prompt
             model_name = state.get("image_model", "Flux pro 1.1")
             new_image_path = await self._regenerate_image(model_name, refined_prompt)
             
             # Update state with new image path and analysis results
+            logger.info("old_image_path: %s", image_path)
             state["generated_image_path"] = new_image_path
+            logger.info("new_image_path: %s", new_image_path)
             state["refined_prompt"] = refined_prompt
-            state["analysis_result"] = analysis_result
-            state["analysis_metrics"] = {
-                "combined_similarity": combined_similarity,
-                "mask_threshold": self.mask_threshold,
-                "analysis_threshold": self.analysis_threshold
-            }
+            
             
             logger.info("Image regeneration completed successfully")
 
@@ -211,25 +221,50 @@ class ImageAnalyzer(BaseProcessNode):
             return {"error": str(e)}
 
     async def _generate_refined_prompt(self, state: Dict[str, Any], analysis_result: Dict[str, Any]) -> str:
-        """Generate a refined prompt based on analysis results"""
+        """Generate a refined prompt based on analysis results using a message-based approach"""
         try:
-            # Get the prompt template
-            prompt_template = self.prompt.get_prompt()
+            # Get recommendations from analysis result
+            recommendations = analysis_result.get("recommendations", {})
+            recommendation_str = str(recommendations)
             
-            # Format the prompt with state values and analysis results
-            formatted_prompt = prompt_template.format(
-                system_prompt=state["system_prompt"],
-                brand_name=state["brand_name"],
-                product_name=state["product_name"],
-                industry=state["industry"],
-                initial_prompt=state.get("initial_prompt", ""),
-                initial_image_prompt=state.get("image_prompt", ""),
-                analysis_result=str(analysis_result.get("comparison_results", {})),
-                recommendations=str(analysis_result.get("recommendations", {}))
+            # Load the prompt template from prompt_generator
+            prompt_file = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)),
+                "prompt_generator",
+                "prompt.yaml"
             )
             
+            # Load the YAML config
+            with open(prompt_file, "r") as f:
+                prompt_config = yaml.safe_load(f)
+            
+            # Create a PromptTemplate from the YAML config
+            prompt_template = PromptTemplate(
+                template=prompt_config["template"],
+                input_variables=prompt_config["input_variables"]
+            )
+            
+            # Get the input variables from state
+            input_vars = {
+                var: state.get(var)
+                for var in prompt_config["input_variables"]
+            }
+            
+            # Format the prompt with the input variables
+            formatted_prompt = prompt_template.format(**input_vars)
+            logger.info("formatted_prompt: %s", formatted_prompt)
+            
+            # Create message history
+            messages = [
+                {"role": "system", "content": formatted_prompt},
+                {"role": "assistant", "content": state.get("system_prompt", "")},
+                {"role": "user", "content": recommendation_str}
+            ]
+            
+            
             # Generate refined prompt using the model
-            response = await self.model.ainvoke(formatted_prompt)
+            response = await self.model.ainvoke(messages)
+            logger.info("response: %s", response)
             return response.content
         except Exception as e:
             logger.error(f"Error generating refined prompt: {str(e)}")
@@ -238,9 +273,93 @@ class ImageAnalyzer(BaseProcessNode):
     async def _regenerate_image(self, model_name: str, prompt: str) -> str:
         """Regenerate the image using the specified model"""
         try:
-            # This would use the same image generation logic as in the image generator
-            # For now, we'll just return a placeholder
-            return f"regenerated_{model_name}_{hash(prompt)}.jpg"
+            if model_name == "Flux pro 1.1":
+                image_url = self._handle_flux_pro(prompt)
+            elif model_name == "Reve 1.0":
+                image_url = self._handle_reve(prompt)
+            elif model_name == "Ideogram v2":
+                image_url = self._handle_ideogram(prompt)
+            else:
+                raise Exception(f"Unsupported model: {model_name}")
+
+            response = requests.get(image_url, stream=True)
+            response.raise_for_status()
+
+            tmpdir = tempfile.mkdtemp(prefix=f"{model_name.lower().replace(' ', '_')}_")
+            filename = os.path.basename(image_url.split("?")[0]) or "image.jpg"
+            path = os.path.join(tmpdir, filename)
+
+            with open(path, "wb") as f:
+                for chunk in response.iter_content(8192):
+                    f.write(chunk)
+
+            logger.info(f"Image saved to: {path}")
+            return path
+
         except Exception as e:
             logger.error(f"Error regenerating image: {str(e)}")
-            raise 
+            raise
+
+    def _handle_flux_pro(self, prompt: str) -> str:
+        """Handle Flux Pro 1.1 image generation"""
+        url_post = get_required_env_var("FLUX_API_HOST_POST")
+        url_get = get_required_env_var("FLUX_API_HOST_GET")
+        headers = {
+            "Content-Type": "application/json",
+            "x-key": get_required_env_var("NYX_BFL_FLUX_KEY")
+        }
+        payload = {
+            "prompt": prompt,
+            "width": 1024,
+            "height": 768
+        }
+
+        response = requests.post(url_post, headers=headers, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        image_id = data.get("id")
+
+        if not image_id:
+            raise Exception("Missing image ID in Flux Pro response")
+
+        max_attempts = 10
+        for _ in range(max_attempts):
+            result = requests.get(url_get, headers=headers, params={"id": image_id})
+            result.raise_for_status()
+            result_data = result.json()
+
+            status = result_data.get("status")
+            if status == "Ready":
+                return result_data["result"].get("sample")
+            elif status not in ["Pending", "InProgress"]:
+                raise Exception(f"Unexpected status: {status}")
+
+        raise Exception("Flux Pro image generation timed out")
+
+    def _handle_reve(self, prompt: str) -> str:
+        """Handle Reve 1.0 image generation"""
+        url = get_required_env_var("REVE_API_URL")
+        payload = {"prompt": prompt, "negative_prompt": "..."}
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        return response.json().get("result")
+
+    def _handle_ideogram(self, prompt: str) -> str:
+        """Handle Ideogram v2 image generation"""
+        url = get_required_env_var("IDEOGRAM_GENERATE_URL")
+        headers = {
+            "Api-Key": get_required_env_var("IDEOGRAM_KEY"),
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "image_request": {
+                "prompt": prompt,
+                "model": "V_2",
+                "style_type": "REALISTIC",
+                "aspect_ratio": "ASPECT_16_9",
+                "negative_prompt": "logos, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts,signature, watermark, username, blurry"
+            }
+        }
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.json()["data"][0].get("url") 
