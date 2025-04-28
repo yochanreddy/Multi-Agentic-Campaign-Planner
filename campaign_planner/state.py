@@ -3,6 +3,7 @@ from langgraph.graph import MessagesState
 
 
 class State(MessagesState):
+    """State class for campaign planner workflow"""
     age_group: Annotated[
         str, "Target demographic age range (e.g. '18-24', '25-34', '35-44')"
     ]
@@ -49,7 +50,7 @@ class State(MessagesState):
     ]
     campaign_name: Annotated[
         str,
-        "A unique campaign identifier combining brand, timing, audience, and theme elements separated by underscores (e.g., 'BrandName_Season_TargetAudience_Theme'). This name helps in easily identifying and distinguishing marketing campaigns across the platform.",
+        "A unique campaign identifier combining brand, timing, audience, and theme elements separated by underscores",
     ]
     campaign_start_date: Annotated[
         str,
@@ -60,10 +61,10 @@ class State(MessagesState):
         "Ending date of the marketing campaign (format: DD-MM-YYYY)",
     ]
     total_budget: Annotated[
-        str,
+        float,
         "The total daily budget predicted to run a campaign based on the previous outputs",
     ]
     channel_budget_allocation: Annotated[
-        Dict[List[str], float],
+        Dict[str, float],
         "A dictionary with the recommended channel names as keys and their respective daily budget allocations in INR",
     ]
