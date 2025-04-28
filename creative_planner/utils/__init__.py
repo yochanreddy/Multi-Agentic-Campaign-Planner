@@ -3,22 +3,25 @@ import os
 from typing import Optional, Dict, Any
 from openai import OpenAI
 
-def get_required_env_var(name: str) -> str:
+def get_required_env_var(name: str, default: Optional[str] = None) -> str:
     """
-    Get a required environment variable or raise an error if not found.
+    Get a required environment variable or use default value if not found.
 
     Args:
         name (str): Name of the environment variable
+        default (Optional[str]): Default value to use if environment variable is not set
 
     Returns:
-        str: Value of the environment variable
+        str: Value of the environment variable or default value
 
     Raises:
-        ValueError: If the environment variable is not set
+        ValueError: If the environment variable is not set and no default is provided
     """
     value = os.getenv(name)
     if value is None:
-        raise ValueError(f"Required environment variable {name} is not set")
+        if default is None:
+            raise ValueError(f"Required environment variable {name} is not set")
+        return default
     return value
 
 def get_module_logger(name: Optional[str] = None) -> logging.Logger:

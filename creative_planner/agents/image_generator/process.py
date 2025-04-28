@@ -4,7 +4,7 @@ import requests
 from typing import Any, Dict
 from langchain_core.runnables import RunnableConfig
 from creative_planner.agents.base.process import BaseProcessNode
-from creative_planner.utils import get_module_logger, get_required_env_var
+from creative_planner.utils import get_required_env_var
 import logging
 
 logger = logging.getLogger("creative_planner.agents.image_generator")
@@ -19,8 +19,7 @@ class ImageGenerator(BaseProcessNode):
         Args:
             config (Dict[str, Any]): Configuration dictionary
         """
-        super().__init__(config, model_name="gpt-4")
-        self.logger = logger
+        super().__init__(config)
 
     async def process(self, state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
         """
@@ -42,7 +41,7 @@ class ImageGenerator(BaseProcessNode):
                 logger.info(f"  - {key}: {value}")
             logger.info("="*80 + "\n")
 
-            self.logger.info("Starting image generation process")
+            logger.info("Starting image generation process")
             logger.info("Generating images from creative prompts...")
             logger.info(f"Current state keys: {list(state.keys())}")
             
@@ -68,7 +67,7 @@ class ImageGenerator(BaseProcessNode):
 
             return state
         except Exception as e:
-            self.logger.error(f"Error in image generation: {str(e)}")
+            logger.error(f"Error in image generation: {str(e)}")
             logger.error("\n" + "="*80)
             logger.error("❌ ERROR IN IMAGE GENERATOR AGENT")
             logger.error("="*80)
@@ -80,7 +79,7 @@ class ImageGenerator(BaseProcessNode):
 
     def _download_image(self, model_name: str, prompt: str) -> str:
         """Download image from the specified model"""
-        self.logger.info(f"Downloading image from model: {model_name}")
+        logger.info(f"Downloading image from model: {model_name}")
         try:
             if model_name == "Flux pro 1.1":
                 image_url = self._handle_flux_pro(prompt)
@@ -102,11 +101,11 @@ class ImageGenerator(BaseProcessNode):
                 for chunk in response.iter_content(8192):
                     f.write(chunk)
 
-            self.logger.info(f"Image saved to: {path}")
+            logger.info(f"Image saved to: {path}")
             return path
 
         except Exception as e:
-            self.logger.error(f"Error downloading image: {str(e)}")
+            logger.error(f"Error downloading image: {str(e)}")
             raise
 
     def _handle_flux_pro(self, prompt: str) -> str:

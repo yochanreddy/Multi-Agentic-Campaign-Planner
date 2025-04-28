@@ -74,6 +74,7 @@ def save_image_to_gcp(image_data, gcp_blob_name):
 def save_image(image_data, blob_name):
     """Save image to the configured storage provider."""
     storage_provider = get_required_env_var("STORAGE_PROVIDER", "GCP").upper()
+    print(f"the platform to save the image is : {storage_provider}")
     logger.info(f"the platform to save the image is : {storage_provider}")
     
     if storage_provider == "AZURE":

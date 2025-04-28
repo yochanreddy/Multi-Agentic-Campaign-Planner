@@ -2,12 +2,13 @@ from typing import Dict, Any
 import yaml
 from langchain.prompts import PromptTemplate
 from langchain_community.chat_models import ChatOpenAI
-from creative_planner.state import State
+from creative_planner.utils import get_required_env_var
+from creative_planner.agents.base.process import BaseProcessNode
 import logging
 
 logger = logging.getLogger("creative_planner.agents.prompt_generator")
 
-class PromptGenerator:
+class PromptGenerator(BaseProcessNode):
     """Class for generating creative prompts."""
 
     def __init__(self, config: Dict[str, Any]):
@@ -17,7 +18,9 @@ class PromptGenerator:
         Args:
             config (Dict[str, Any]): Configuration dictionary
         """
-        self.config = config
+        super().__init__(config)
+        self.model_name = get_required_env_var("PROMPT_MODEL_NAME", "gpt-4")
+        self.temperature = float(get_required_env_var("PROMPT_TEMPERATURE", "0.5"))
 
     def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -59,8 +62,8 @@ class PromptGenerator:
             
             # Initialize the LLM
             llm = ChatOpenAI(
-                model_name="gpt-4",
-                temperature=0.5
+                model_name=self.model_name,
+                temperature=self.temperature
             )
             
             # Generate the system prompt using the LLM

@@ -117,11 +117,6 @@ def configure_logging():
     
     file_handler.setFormatter(ConsistentFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     
-    # Create stream handler for terminal output
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(log_level)
-    stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    
     # Configure root logger to prevent propagation and remove all handlers
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.WARNING)  # Set root logger to WARNING to prevent propagation
@@ -138,7 +133,7 @@ def configure_logging():
         "creative_planner.agents.text_layering"
     ]
     
-    # Configure all loggers to prevent propagation and add both handlers
+    # Configure all loggers to prevent propagation and add file handler
     for agent_logger in agent_loggers:
         logger = logging.getLogger(agent_logger)
         logger.setLevel(log_level)
@@ -146,7 +141,6 @@ def configure_logging():
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
         logger.addHandler(file_handler)
-        logger.addHandler(stream_handler)
     
     # Suppress specific loggers
     logging.getLogger("langchain_core.prompts.loading").setLevel(logging.ERROR)

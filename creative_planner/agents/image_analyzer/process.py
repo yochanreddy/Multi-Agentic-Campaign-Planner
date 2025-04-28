@@ -4,7 +4,6 @@ from typing import Any, Dict, Optional
 from langchain_core.runnables import RunnableConfig
 from creative_planner.agents.base.process import BaseProcessNode
 from creative_planner.utils import get_module_logger, get_required_env_var
-from creative_planner.agents.image_analyzer.prompt import ImageAnalyzerPrompt
 import logging
 from pathlib import Path
 import yaml
@@ -25,13 +24,11 @@ class ImageAnalyzer(BaseProcessNode):
             config (Dict[str, Any]): Configuration dictionary
         """
         super().__init__(config, model_name="gpt-4")
-        self.prompt = ImageAnalyzerPrompt(config)
-        # self.analysis_threshold = config.get("analysis_threshold", 0.4)
-        self.analysis_threshold = 0.4
-        self.mask_threshold = config.get("mask_threshold", 0.3)
-        self.timeout = config.get("timeout", 10.0)
-        self.alison_timeout = config.get("alison_timeout", 180.0)
-        self.seed = config.get("seed", 42)
+        self.analysis_threshold = float(get_required_env_var("ANALYSIS_THRESHOLD", "0.4"))
+        self.mask_threshold = float(get_required_env_var("MASK_THRESHOLD", "0.3"))
+        self.timeout = float(get_required_env_var("TIMEOUT", "10.0"))
+        self.alison_timeout = float(get_required_env_var("ALISON_TIMEOUT", "180.0"))
+        self.seed = int(get_required_env_var("SEED", "42"))
         self.alison_endpoint = get_required_env_var("ALISON_ANALYZE_ENDPOINT")
 
     async def process(self, state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
@@ -95,8 +92,7 @@ class ImageAnalyzer(BaseProcessNode):
             logger.info("combined_similarity: %s", combined_similarity)
             logger.info("analysis_threshold: %s", self.analysis_threshold)
 
-            # if combined_similarity >= self.analysis_threshold:
-            if combined_similarity >= 1:
+            if combined_similarity >= self.analysis_threshold:
                 logger.info("Image meets quality threshold, no regeneration needed")
                 logger.info("\n" + "="*80)
                 logger.info("✅ COMPLETED IMAGE ANALYZER AGENT")

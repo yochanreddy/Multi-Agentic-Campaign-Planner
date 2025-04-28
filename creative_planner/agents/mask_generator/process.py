@@ -12,14 +12,13 @@ import logging
 from creative_planner.agents.base.process import BaseProcessNode
 from creative_planner.state import State
 from creative_planner.utils.error_handler import NyxAIException
-
-from creative_planner.utils.config import config
+from creative_planner.utils import get_required_env_var
 
 logger = logging.getLogger("creative_planner.agents.mask_generator")
 
 # Set deterministic behavior for reproducibility
-torch.manual_seed(getattr(config, 'seed', 42))
-np.random.seed(getattr(config, 'seed', 42))
+torch.manual_seed(int(get_required_env_var("SEED", "42")))
+np.random.seed(int(get_required_env_var("SEED", "42")))
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
@@ -29,7 +28,6 @@ class MaskGenerator(BaseProcessNode):
 
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        self.config = config
         self._load_model()
 
     def _load_model(self):
@@ -149,10 +147,9 @@ class MaskGenerator(BaseProcessNode):
                     detail="7103: generated_image_path not found in state"
                 )
 
-            # Get threshold from config
-            threshold = float(self.config.get("mask_threshold", 0.3))
+            # Get threshold from environment variable
+            threshold = float(get_required_env_var("MASK_THRESHOLD", "0.3"))
             logger.info(f"Threshold: {threshold}")
-            # threshold = 0.1
 
             # Generate mask
             mask_path = await self._generate_mask(

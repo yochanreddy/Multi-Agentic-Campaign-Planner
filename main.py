@@ -295,12 +295,15 @@ async def request_campaign_plan(
     response_description="Returns the current processing status and node information"
 )
 async def status_campaign_plan(request_id: str) -> StatusResponse:
+    # Clean the thread ID by removing any newline characters
+    request_id = request_id.strip()
     thread_config = {
         "configurable": {
             "thread_id": request_id,
         }
     }
     current_state = await workflow.aget_state(thread_config)
+
 
     if current_state.next:
         response = StatusResponse(
@@ -382,12 +385,15 @@ async def request_creative_plan(
     response_description="Returns the current processing status and node information"
 )
 async def status_creative_plan(request_id: str) -> StatusResponse:
+    # Clean the thread ID by removing any newline characters
+    request_id = request_id.strip()
     thread_config = {
         "configurable": {
             "thread_id": request_id,
         }
     }
     current_state = await creative_workflow.aget_state(thread_config)
+
 
     if current_state.next:
         response = StatusResponse(

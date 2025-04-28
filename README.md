@@ -94,21 +94,65 @@ The project is organized into several key components:
 
 ## Installation
 
-1. Install `uv` in the system
+1. Install `uv` in the system (if not already installed)
 
-2. Run the following command to create new environment:
+2. Clone the repository:
+```bash
+git clone <repository-url>
+cd nyx-campaign-agent
+```
 
-    ```bash
-    uv sync
-    ```
+3. Create and activate the virtual environment:
+```bash
+uv sync
+source .venv/bin/activate
+```
+
+4. Install dependencies:
+```bash
+uv pip install -r requirements.txt
+```
 
 ## Usage
 
-Start the FastAPI server:
-
+1. Start the FastAPI server:
 ```bash
-uvicorn main:app
+python3 main.py
 ```
+
+The server will start and be available at:
+- API Documentation: http://localhost:8000/docs
+- ReDoc Documentation: http://localhost:8000/redoc
+
+2. The server will automatically reload when you make changes to the code.
+
+## Environment Variables
+
+Make sure to set up the following environment variables:
+- `LOG_LEVEL`: Set to "DEBUG" for development or "INFO" for production
+- `PGSQL_HOST`: PostgreSQL host
+- `PGSQL_DATABASE_NAME`: PostgreSQL database name
+- `PGSQL_USERNAME`: PostgreSQL username
+- `PGSQL_PASSWORD`: PostgreSQL password
+- `STORAGE_PROVIDER`: Set to either "GCP" or "AZURE"
+- For GCP:
+  - `GCP_TYPE`
+  - `GCP_PROJECT_ID`
+  - `GCP_PRI_KEY_ID`
+  - `GCP_PRI_KEY`
+  - `GCP_CLIENT_EMAIL`
+  - `GCP_CLIENT_ID`
+  - `GCP_AUTH_URI`
+  - `GCP_TOKEN_URI`
+  - `GCP_AUTH_PROVIDER`
+  - `GCP_CLIENT_CERT_URL`
+  - `GCP_UNIVERSE_DOMAIN`
+  - `BRAND_GCP_BUCKET_NAME`
+- For Azure:
+  - `AZURE_STORAGE_CONNECTION_STRING`
+  - `AZURE_CONTAINER_NAME`
+  - `AZURE_STORAGE_ACCOUNT`
+  - `AZURE_STORAGE_KEY`
 
 ## API Endpoints
 
@@ -126,7 +170,7 @@ uvicorn main:app
 
 ## Dependencies
 
-- Python 3.9+
+- Python 3.12
 - FastAPI
 - Pydantic
 - LangChain

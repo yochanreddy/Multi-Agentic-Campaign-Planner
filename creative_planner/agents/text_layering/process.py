@@ -1,5 +1,4 @@
 from typing import Dict, Any
-from langchain_core.runnables import RunnableConfig
 from creative_planner.agents.base.process import BaseProcessNode
 import os
 import requests
@@ -7,6 +6,7 @@ from creative_planner.utils import get_required_env_var
 import logging
 from creative_planner.utils.logging_config import configure_logging
 from creative_planner.utils.error_handler import NyxAIException
+from creative_planner.agents.base.process import RunnableConfig
 
 # Configure logging
 configure_logging()
@@ -24,9 +24,11 @@ def generate_image(prompt: str, image_path: str, mask_path: str) -> str:
     Returns:
         str: Local path to the generated image
     """
-    # Get API credentials
-    url = "https://api.ideogram.ai/edit"
+    # Get API credentials and configuration
+    url = get_required_env_var("IDEOGRAM_OVERLAY_URL", "https://api.ideogram.ai/edit")
     api_key = get_required_env_var("IDEOGRAM_KEY")
+    model = get_required_env_var("IDEOGRAM_MODEL", "V_2")
+    
     
     # Prepare files and data
     with open(image_path, "rb") as img, open(mask_path, "rb") as mask:
@@ -36,7 +38,7 @@ def generate_image(prompt: str, image_path: str, mask_path: str) -> str:
         }
         data = {
             "prompt": prompt,
-            "model": "V_2"
+            "model": model
         }
         
         # Make the request
@@ -67,10 +69,16 @@ def generate_image(prompt: str, image_path: str, mask_path: str) -> str:
 
 class TextLayeringProcess(BaseProcessNode):
     def __init__(self, config: Dict[str, Any]):
+        """
+        Initialize the text layering process.
+
+        Args:
+            config (Dict[str, Any]): Configuration dictionary
+        """
         super().__init__(config)
         self.logger = logger
 
-    async def process(self, state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
+    async def process(self, state: Dict[str, Any], config: RunnableConfig = None) -> Dict[str, Any]:
         try:
             logger.info("\n" + "="*80)
             logger.info("🚀 STARTING TEXT LAYERING AGENT")

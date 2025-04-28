@@ -2,7 +2,7 @@ from typing import Dict, Any
 from creative_planner.agents.base.process import BaseProcessNode
 from creative_planner.state import State
 from creative_planner.utils.error_handler import NyxAIException
-from creative_planner.utils.config import config
+from creative_planner.utils import get_required_env_var
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from pydantic import BaseModel, Field, validator
@@ -27,7 +27,7 @@ class CTAGenerator(BaseProcessNode):
     """Process implementation for CTA generator agent"""
     
     def __init__(self, config: Dict[str, Any]):
-        super().__init__(config, model_name="gpt-4")
+        super().__init__(config, model_name=get_required_env_var("CTA_MODEL_NAME", "gpt-4"))
         self.logger = logging.getLogger("creative_planner.agents.cta_generator")
         self._load_prompt_template()
         
@@ -118,15 +118,15 @@ class CTAGenerator(BaseProcessNode):
                 detail=f"7110: {str(e)}"
             )
             
-    async def process(self, state: State, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def process(self, state: State) -> Dict[str, Any]:
         """Process the state to generate headlines and CTA"""
-        print("\n" + "="*80)
-        print("🚀 STARTING CTA GENERATOR AGENT")
-        print("="*80)
-        print("📊 Initial State:")
+        self.logger.info("\n" + "="*80)
+        self.logger.info("🚀 STARTING CTA GENERATOR AGENT")
+        self.logger.info("="*80)
+        self.logger.info("📊 Initial State:")
         for key, value in state.items():
-            print(f"  - {key}: {value}")
-        print("="*80 + "\n")
+            self.logger.info(f"  - {key}: {value}")
+        self.logger.info("="*80 + "\n")
         
         self.logger.info("Starting headlines and CTA generation process")
         self.logger.info(f"Current state keys: {list(state.keys())}")
@@ -159,25 +159,25 @@ class CTAGenerator(BaseProcessNode):
             
             self.logger.info("Headlines and CTA generated successfully")
             
-            print("\n" + "="*80)
-            print("✅ COMPLETED CTA GENERATOR AGENT")
-            print("="*80)
-            print("📊 Final State:")
+            self.logger.info("\n" + "="*80)
+            self.logger.info("✅ COMPLETED CTA GENERATOR AGENT")
+            self.logger.info("="*80)
+            self.logger.info("📊 Final State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                self.logger.info(f"  - {key}: {value}")
+            self.logger.info("="*80 + "\n")
             
             return state
             
         except Exception as e:
             self.logger.error(f"Error in headlines and CTA generation: {str(e)}")
-            print("\n" + "="*80)
-            print("❌ ERROR IN CTA GENERATOR AGENT")
-            print("="*80)
-            print("📊 Error State:")
+            self.logger.error("\n" + "="*80)
+            self.logger.error("❌ ERROR IN CTA GENERATOR AGENT")
+            self.logger.error("="*80)
+            self.logger.error("📊 Error State:")
             for key, value in state.items():
-                print(f"  - {key}: {value}")
-            print("="*80 + "\n")
+                self.logger.error(f"  - {key}: {value}")
+            self.logger.error("="*80 + "\n")
             raise NyxAIException(
                 internal_code=7105,
                 message="Error generating headlines and CTA",

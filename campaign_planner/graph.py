@@ -12,7 +12,15 @@ from campaign_planner.state import State
 
 
 class CampaignPlanner(BaseGraph):
-    def _build_graph(self):
+    """Main graph implementation for campaign planner workflow"""
+
+    def _build_graph(self) -> StateGraph:
+        """
+        Build the graph structure for campaign planning.
+
+        Returns:
+            StateGraph: Configured graph for campaign planning
+        """
         # Create nodes
         brand_industry_classifier = BrandIndustryClassifier(self.config)
         audience_segment_analyzer = AudienceSegmentAnalyzer(self.config)
@@ -54,14 +62,57 @@ class CampaignPlanner(BaseGraph):
         graph.add_edge("campaign_schedule_recommender", "marketing_budget_allocator")
         graph.add_edge("marketing_budget_allocator", "campaign_name_generator")
 
-        # Add start and end points
+        # Set entry and finish points
         graph.set_entry_point("brand_industry_classifier")
         graph.set_finish_point("campaign_name_generator")
+
+        # Configure state passing
+        graph.config = {
+            "recursion_limit": 1,
+            "state_updates": {
+                "brand_industry_classifier": {
+                    "next": "audience_segment_analyzer",
+                    "state": lambda x: x
+                },
+                "audience_segment_analyzer": {
+                    "next": "ad_channel_recommender",
+                    "state": lambda x: x
+                },
+                "ad_channel_recommender": {
+                    "next": "campaign_schedule_recommender",
+                    "state": lambda x: x
+                },
+                "campaign_schedule_recommender": {
+                    "next": "marketing_budget_allocator",
+                    "state": lambda x: x
+                },
+                "marketing_budget_allocator": {
+                    "next": "campaign_name_generator",
+                    "state": lambda x: x
+                },
+                "campaign_name_generator": {
+                    "next": None,
+                    "state": lambda x: x
+                }
+            }
+        }
 
         return graph
 
     def get_input_schema(self) -> type:
-        return None
+        """
+        Get the input schema for the graph.
+
+        Returns:
+            type: The State class
+        """
+        return State
 
     def get_output_schema(self) -> type:
-        return None
+        """
+        Get the output schema for the graph.
+
+        Returns:
+            type: The State class
+        """
+        return State
