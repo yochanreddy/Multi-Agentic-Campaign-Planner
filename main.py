@@ -16,6 +16,7 @@ from enum import Enum
 from fastapi import HTTPException
 from creative_planner.utils.logging_config import configure_logging
 from creative_planner.utils.storage import get_signed_url, save_image
+from dotenv import load_dotenv
 
 
 workflow = None
@@ -33,6 +34,11 @@ config = None
 configure_logging()
 logger = logging.getLogger(__name__)
 
+# Load environment variables
+load_dotenv()
+
+# Get root path from environment variable
+ROOT_PATH = os.getenv("ROOT_PATH", "/nyx-campaign-agent")
 
 class ProcessingStatus(str, Enum):
     QUEUED = "QUEUED"
@@ -252,15 +258,24 @@ app = FastAPI(
     description="API for generating and managing marketing campaigns and creatives",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    root_path=ROOT_PATH
 )
+
+# Update CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+    expose_headers=["*"]  # Expose all headers
 )
+
+# Add a specific route for OpenAPI spec
+@app.get("/openapi.json", include_in_schema=False)
+async def get_openapi_schema():
+    return app.openapi()
 
 
 @app.post("/request_campaign_plan", 
