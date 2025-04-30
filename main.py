@@ -107,6 +107,10 @@ class CampaignSubmitRequest(BaseModel):
     integrated_ad_platforms: List[ChannelType] = Field(
         description="Digital advertising platforms where campaigns will run (e.g. 'Meta', 'Google', 'LinkedIn', 'TikTok')"
     )
+    account_ids: List[str] = Field(
+        description="List of account IDs associated with the campaign",
+        default_factory=list
+    )
 
     class Config:
         json_schema_extra = {
@@ -117,7 +121,8 @@ class CampaignSubmitRequest(BaseModel):
                 "product_name": "Zepto Cafe",
                 "product_description": "Zepto Cafe is a 10-minute food delivery service offering a diverse menu of freshly prepared snacks, beverages, and meals, combining speed and quality to cater to fast-paced urban lifestyles.",
                 "campaign_objective": "Increase Brand Awareness",
-                "integrated_ad_platforms": ["Meta", "Google"]
+                "integrated_ad_platforms": ["Meta", "Google"],
+                "account_ids": [ "6694298580", "350653016327812"]
             }
         }
 

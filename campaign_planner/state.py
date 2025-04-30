@@ -68,3 +68,7 @@ class State(MessagesState):
         Dict[str, float],
         "A dictionary with the recommended channel names as keys and their respective daily budget allocations in INR",
     ]
+    account_ids: Annotated[
+        List[str],
+        "List of account IDs associated with the campaign",
+    ]
