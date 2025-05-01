@@ -20,7 +20,8 @@ class HumanNode(BaseHumanNode):
             "interests": state.get("interests", []),
             "locations": state.get("locations", []),
             "psychographic_traits": state.get("psychographic_traits", []),
-            "recommended_ad_platforms": state.get("recommended_ad_platforms", [])
+            "recommended_ad_platforms": state.get("recommended_ad_platforms", []),
+            "total_budget": state.get("total_budget", 0.0)
         }
         
         # Validate the extracted fields
