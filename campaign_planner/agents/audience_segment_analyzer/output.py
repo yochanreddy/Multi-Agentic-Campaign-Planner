@@ -146,7 +146,7 @@ class OutputSchema(BaseModel):
         ...,
         description="Personality characteristics, values, attitudes, aspirations, and lifestyle choices that define the target audience's decision-making and behavior patterns.",
     )
-    recommended_ad_platforms: List[str] = Field(
+    recommended_ad_platforms_by_model: List[str] = Field(
         ...,
         description="Recommended Digital advertising platforms integrated with the platform where campaigns will run",
     )
@@ -172,7 +172,6 @@ class OutputNode(BaseOutputNode):
         """Format the output state"""
         logger.debug(f"{config['configurable']['thread_id']} start")
        
-
         last_message = state["messages"][-1]
         output_data: OutputSchema = self.output_parser.invoke(last_message)
         
@@ -228,12 +227,11 @@ class OutputNode(BaseOutputNode):
                         output_data.gender = api_response["gender"].lower()
                         logger.info(f"Updated gender to: {output_data.gender}")
 
-                    # Update recommended_ad_platforms from API response
+                    # Update platforms from API response
                     if "platforms" in api_response:
-                        # Update platforms list
-                        output_data.recommended_ad_platforms = api_response["platforms"]
-                        logger.info(f"Updated recommended_ad_platforms to: {output_data.recommended_ad_platforms}")
-                        
+                        output_data.recommended_ad_platforms_by_model = api_response["platforms"]
+                        logger.info(f"Updated recommended_ad_platforms_by_model to: {output_data.recommended_ad_platforms_by_model}")
+
                     # Update locations from API response
                     if "countries" in api_response:
                         # Parse the string representation of list into actual list
@@ -256,6 +254,11 @@ class OutputNode(BaseOutputNode):
                         logger.warning(f"API error response: {error_response}")
                     except:
                         logger.warning(f"API error response: {response.text}")
+                    # Remove recommended_ad_platforms_by_model from output data on API failure
+                    output_dict = output_data.model_dump()
+                    output_dict.pop('recommended_ad_platforms_by_model', None)
+                    logger.info("Removed recommended_ad_platforms_by_model from output data due to API failure")
+                    return output_dict
                 
         except httpx.ConnectError as e:
             logger.warning(f"Connection error: Could not connect to optimization service. Error: {str(e)}")

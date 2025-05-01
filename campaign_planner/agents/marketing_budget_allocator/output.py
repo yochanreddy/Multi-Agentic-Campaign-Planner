@@ -137,11 +137,15 @@ class OutputNode(BaseOutputNode):
                 response.raise_for_status()
                 api_response = response.json()
                 logger.info(f"Budget allocation API call successful: {response.status_code}")
-                logger.debug(f"Budget allocation API response: {api_response}")
+                logger.info(f"Budget allocation API response: {api_response}")
                 
                 # Update channel_budget_allocation with API response
-                if "allocations" in api_response:
-                    output_data.channel_budget_allocation = api_response["allocations"]
+                if "platform_budget_split" in api_response:
+                    # Convert platform_budget_split to the required format
+                    allocations = {}
+                    for platform in api_response["platform_budget_split"]:
+                        allocations[platform["Platform"]] = platform["Allocation_Amount"]
+                    output_data.channel_budget_allocation = allocations
                     logger.info(f"Updated channel_budget_allocation from API: {output_data.channel_budget_allocation}")
                 
         except httpx.ConnectError as e:

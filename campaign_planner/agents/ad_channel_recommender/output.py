@@ -33,18 +33,18 @@ class OutputNode(BaseOutputNode):
         logger.debug(f"{config['configurable']['thread_id']} start")
 
         # Log state value if it exists
-        if "recommended_ad_platforms" in state:
-            logger.info(f"State has recommended_ad_platforms: {state['recommended_ad_platforms']}")
+        if "recommended_ad_platforms_by_model" in state:
+            logger.info(f"State has recommended_ad_platforms_by_model: {state['recommended_ad_platforms_by_model']}")
         else:
-            logger.info("State does not have recommended_ad_platforms")
+            logger.info("State does not have recommended_ad_platforms_by_model")
 
         # Log message content
         last_message = state["messages"][-1]
-        logger.info(f"Message content: {last_message.content}")
+        
 
         # If recommended_ad_platforms already exists in state, use it
-        if "recommended_ad_platforms" in state:
-            output_data = OutputSchema(recommended_ad_platforms=state["recommended_ad_platforms"])
+        if "recommended_ad_platforms_by_model" in state and state["recommended_ad_platforms_by_model"]:
+            output_data = OutputSchema(recommended_ad_platforms=state["recommended_ad_platforms_by_model"])
             logger.info(f"Using state value: {output_data.recommended_ad_platforms}")
         else:
             # Otherwise, parse from the message
