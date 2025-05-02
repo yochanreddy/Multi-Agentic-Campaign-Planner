@@ -49,12 +49,11 @@ except Exception as e:
 
 def get_goals_from_bigquery(account_ids: List[str], campaign_objective: str) -> Dict[str, float]:
     """Get goals from BigQuery in cascading manner"""
-    if not account_ids or not campaign_objective:
-        logger.warning("Missing account_ids or campaign_objective, skipping BigQuery goals")
-        return {}
-
-    queries = [
-        {
+    queries = []
+    
+    # Add first query if we have both account_ids and campaign_objective
+    if account_ids and campaign_objective:
+        queries.append({
             "query": f"""
             SELECT max(views) as views,
                    max(spend) as spend,
@@ -66,8 +65,11 @@ def get_goals_from_bigquery(account_ids: List[str], campaign_objective: str) -> 
             AND campaign_objective="{campaign_objective}"
             """,
             "description": "Query with account_ids and campaign_objective"
-        },
-        {
+        })
+    
+    # Add second query if we have campaign_objective
+    if campaign_objective:
+        queries.append({
             "query": f"""
             SELECT max(views) as views,
                    max(spend) as spend,
@@ -78,19 +80,20 @@ def get_goals_from_bigquery(account_ids: List[str], campaign_objective: str) -> 
             WHERE campaign_objective="{campaign_objective}"
             """,
             "description": "Query with campaign_objective only"
-        },
-        {
-            "query": f"""
-            SELECT max(views) as views,
-                   max(spend) as spend,
-                   max(impressions) as impressions,
-                   max(clicks) as clicks,
-                   max(conversions) as conversions
-            FROM `{BIGQUERY_TABLE}`
-            """,
-            "description": "Default query without filters"
-        }
-    ]
+        })
+    
+    # Always add the default query
+    queries.append({
+        "query": f"""
+        SELECT max(views) as views,
+               max(spend) as spend,
+               max(impressions) as impressions,
+               max(clicks) as clicks,
+               max(conversions) as conversions
+        FROM `{BIGQUERY_TABLE}`
+        """,
+        "description": "Default query without filters"
+    })
     
     for query_info in queries:
         try:
