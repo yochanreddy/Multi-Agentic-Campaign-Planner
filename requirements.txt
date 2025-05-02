@@ -14,5 +14,6 @@ Pillow==11.2.1
 langchain-chroma>=0.0.1
 langchain-openai>=0.0.1
 langchain-community>=0.0.1
+google-cloud-bigquery
 
 

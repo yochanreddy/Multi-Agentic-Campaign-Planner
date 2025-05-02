@@ -32,7 +32,24 @@ class OutputNode(BaseOutputNode):
         """Format the output state"""
         logger.debug(f"{config['configurable']['thread_id']} start")
 
+        # Log state value if it exists
+        if "recommended_ad_platforms_by_model" in state:
+            logger.info(f"State has recommended_ad_platforms_by_model: {state['recommended_ad_platforms_by_model']}")
+        else:
+            logger.info("State does not have recommended_ad_platforms_by_model")
+
+        # Log message content
         last_message = state["messages"][-1]
-        output_data: OutputSchema = self.output_parser.invoke(last_message)
+        
+
+        # If recommended_ad_platforms already exists in state, use it
+        if "recommended_ad_platforms_by_model" in state and state["recommended_ad_platforms_by_model"]:
+            output_data = OutputSchema(recommended_ad_platforms=state["recommended_ad_platforms_by_model"])
+            logger.info(f"Using state value: {output_data.recommended_ad_platforms}")
+        else:
+            # Otherwise, parse from the message
+            output_data: OutputSchema = self.output_parser.invoke(last_message)
+            logger.info(f"Using parsed message value: {output_data.recommended_ad_platforms}")
+            
         logger.debug(f"{config['configurable']['thread_id']} finish")
         return output_data.model_dump()
