@@ -16,10 +16,13 @@ from enum import Enum
 from fastapi import HTTPException
 from creative_planner.utils.logging_config import configure_logging
 from creative_planner.utils.storage import get_signed_url, save_image
+from dotenv import load_dotenv
+from campaign_objective_planner.graph import CampaignObjectiveGraph
 
 
 workflow = None
 creative_workflow = None
+objective_workflow = None
 
 class ChannelType(str, Enum):
     META = "Meta"
@@ -33,6 +36,11 @@ config = None
 configure_logging()
 logger = logging.getLogger(__name__)
 
+# Load environment variables
+load_dotenv()
+
+# Get root path from environment variable
+ROOT_PATH = os.getenv("ROOT_PATH", "/nyx-campaign-agent")
 
 class ProcessingStatus(str, Enum):
     QUEUED = "QUEUED"
@@ -45,6 +53,7 @@ class ProcessingStatus(str, Enum):
 async def lifespan(app: FastAPI):
     global workflow
     global creative_workflow
+    global objective_workflow
     global config
 
     config = load_config()
@@ -54,6 +63,7 @@ async def lifespan(app: FastAPI):
         config["checkpointer"] = MemorySaver()
         workflow = CampaignPlanner(config).get_compiled_graph()
         creative_workflow = CreativePlanner(config).get_compiled_graph()
+        objective_workflow = CampaignObjectiveGraph(config).get_compiled_graph()
         # draw_mermaid_graph(workflow)
         # draw_mermaid_graph(creative_workflow)
         yield
@@ -74,6 +84,7 @@ async def lifespan(app: FastAPI):
 
             workflow = CampaignPlanner(config).get_compiled_graph()
             creative_workflow = CreativePlanner(config).get_compiled_graph()
+            objective_workflow = CampaignObjectiveGraph(config).get_compiled_graph()
             yield
 
     logger.info("Workflow initialized successfully")
@@ -101,6 +112,10 @@ class CampaignSubmitRequest(BaseModel):
     integrated_ad_platforms: List[ChannelType] = Field(
         description="Digital advertising platforms where campaigns will run (e.g. 'Meta', 'Google', 'LinkedIn', 'TikTok')"
     )
+    account_ids: List[str] = Field(
+        description="List of account IDs associated with the campaign",
+        default_factory=list
+    )
 
     class Config:
         json_schema_extra = {
@@ -111,7 +126,8 @@ class CampaignSubmitRequest(BaseModel):
                 "product_name": "Zepto Cafe",
                 "product_description": "Zepto Cafe is a 10-minute food delivery service offering a diverse menu of freshly prepared snacks, beverages, and meals, combining speed and quality to cater to fast-paced urban lifestyles.",
                 "campaign_objective": "Increase Brand Awareness",
-                "integrated_ad_platforms": ["Meta", "Google"]
+                "integrated_ad_platforms": ["Meta", "Google"],
+                "account_ids": [ "6694298580", "350653016327812"]
             }
         }
 
@@ -246,21 +262,81 @@ class CreativeResultResponse(BaseModel):
     signed_url: str = Field(..., description="Signed URL for the final creative image")
 
 
+class CampaignObjectiveRequest(BaseModel):
+    brand_name: Optional[str] = Field(
+        default=None,
+        description="Official registered name of the brand or company"
+    )
+    brand_description: Optional[str] = Field(
+        default=None,
+        description="Comprehensive description of the brand's identity, values and market positioning"
+    )
+    website_url: Optional[str] = Field(
+        default=None,
+        description="Full URL of the brand's website"
+    )
+    campaign_url: Optional[str] = Field(
+        default=None,
+        description="Full URL of the campaign landing page"
+    )
+    user_prompt: Optional[str] = Field(
+        default=None,
+        description="Optional user-provided description of the intended campaign objective or marketing goals"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "brand_name": "UrbanBite",
+                "brand_description": "UrbanBite is a premium meal delivery service specializing in healthy, chef-crafted meals for urban professionals. We focus on locally-sourced ingredients, sustainable packaging, and quick delivery within 30 minutes.",
+                "website_url": "www.urbanbite.com",
+                "campaign_url": "www.urbanbite.com/summer-promo",
+                "user_prompt": "We want to increase our customer base and get more people to try our service for the first time. We're also looking to promote our new loyalty program."
+            }
+        }
+
+
+class CampaignObjectiveResponse(BaseModel):
+    campaign_objective: str = Field(
+        description="Selected campaign objective based on brand analysis"
+    )
+    reasoning: str = Field(
+        description="Explanation of why this objective was selected"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "campaign_objective": "Brand Awareness",
+                "reasoning": "Based on the brand description and website analysis, Brand Awareness was selected as the primary objective because UrbanBite is a new premium service entering the market and needs to establish its brand identity and value proposition."
+            }
+        }
+
+
 app = FastAPI(
     lifespan=lifespan,
     title="Nyx Campaign Agent API",
     description="API for generating and managing marketing campaigns and creatives",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    root_path=ROOT_PATH
 )
+
+# Update CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Allows all origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+    expose_headers=["*"]  # Expose all headers
 )
+
+# Add a specific route for OpenAPI spec
+@app.get("/openapi.json", include_in_schema=False)
+async def get_openapi_schema():
+    return app.openapi()
 
 
 @app.post("/request_campaign_plan", 
@@ -453,6 +529,52 @@ async def get_creative_plan(request_id: str):
             
         return CreativeResultResponse(signed_url=signed_url)
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/determine_objective", 
+    response_model=CampaignObjectiveResponse,
+    summary="Determine campaign objective",
+    description="Analyzes brand information, website content, and campaign content to determine the most appropriate campaign objective.",
+    response_description="Returns the selected campaign objective and reasoning"
+)
+async def determine_objective(request: CampaignObjectiveRequest) -> CampaignObjectiveResponse:
+    try:
+        # Convert Pydantic model to dict and log the data
+        input_data = request.model_dump()
+        logger.info(f"Input data: {input_data}")
+        
+        # Create thread config
+        thread_id = str(uuid.uuid4())
+        thread_config = {
+            "configurable": {
+                "thread_id": thread_id
+            }
+        }
+        
+        # Create initial state
+        state = {
+            "brand_name": input_data.get("brand_name"),
+            "brand_description": input_data.get("brand_description"),
+            "website_url": input_data.get("website_url"),
+            "campaign_url": input_data.get("campaign_url"),
+            "user_prompt": input_data.get("user_prompt"),
+            "campaign_objective": None,
+            "reasoning": ""
+        }
+        
+        # Run the graph
+        result = await objective_workflow.ainvoke(state, config=thread_config)
+        
+        # Access values through the state object
+        return CampaignObjectiveResponse(
+            campaign_objective=result["campaign_objective"],
+            reasoning=result["reasoning"]
+        )
+    except Exception as e:
+        logger.error(f"Error in determine_objective: {str(e)}")
+        logger.error(f"Input data type: {type(input_data)}")
+        logger.error(f"Input data keys: {input_data.keys() if isinstance(input_data, dict) else 'Not a dict'}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
