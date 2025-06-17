@@ -405,6 +405,12 @@ async def get_campaign_plan(request_id: str) -> CampaignResultResponse:
         }
     }
     current_state = await workflow.aget_state(thread_config)
+    
+    if not current_state:
+        raise HTTPException(status_code=404, detail="Request ID not found")
+        
+    if current_state.next:
+        raise HTTPException(status_code=404, detail="Campaign plan not ready yet")
 
     return CampaignResultResponse(
         age_group=current_state.values.get("age_group", ""),
