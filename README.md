@@ -113,6 +113,27 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
+5. Install ODBC Driver for SQL Server:
+
+For macOS:
+```bash
+brew tap microsoft/mssql-release https://github.com/Microsoft/homebrew-mssql-release
+brew update
+brew install msodbcsql18 mssql-tools18
+```
+
+For Ubuntu/Debian:
+```bash
+curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list > /etc/apt/sources.list.d/mssql-release.list
+apt-get update
+ACCEPT_EULA=Y apt-get install -y msodbcsql18 mssql-tools18
+```
+
+For Windows:
+- Download the Microsoft ODBC Driver 18 for SQL Server from the [Microsoft Download Center](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server)
+- Run the downloaded installer and follow the installation wizard
+
 ## Usage
 
 1. Start the FastAPI server:
