@@ -125,7 +125,7 @@ class CampaignSubmitRequest(BaseModel):
                 "brand_description": "Top 3 quick delivery service startup",
                 "product_name": "Zepto Cafe",
                 "product_description": "Zepto Cafe is a 10-minute food delivery service offering a diverse menu of freshly prepared snacks, beverages, and meals, combining speed and quality to cater to fast-paced urban lifestyles.",
-                "campaign_objective": "Increase Brand Awareness",
+                "campaign_objective": "Brand Awareness",
                 "integrated_ad_platforms": ["Meta", "Google"],
                 "account_ids": [ "6694298580", "350653016327812"]
             }

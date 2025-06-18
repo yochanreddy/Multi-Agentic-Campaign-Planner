@@ -3,10 +3,15 @@ from typing import Any, Dict, List, Literal
 import httpx
 import json
 import ast
-from google.cloud import bigquery
+import struct
+from itertools import chain, repeat
+import urllib
+import pandas as pd
+from azure.identity import ClientSecretCredential
+import pyodbc
+from sqlalchemy import create_engine
 import os
 from dotenv import load_dotenv
-from google.oauth2 import service_account
 
 from campaign_planner.agents.base import BaseOutputNode
 from langchain_core.runnables.config import RunnableConfig
@@ -20,112 +25,172 @@ load_dotenv()
 
 # Get API URLs from environment variables
 OPTIMIZATION_API_URL = os.getenv("OPTIMIZATION_API_URL", "https://nyx-ai-api.dev.nyx.today/nyx-ad-recommendation/optimize")
-BIGQUERY_TABLE = os.getenv("BIGQUERY_TABLE", "nyx-agents.reporting.recomm_engine_combined")
 
-# BigQuery credentials configuration for authentication
-credentials_dict = {
-    "type": os.getenv("GCP_TYPE"),
-    "project_id": os.getenv("GCP_PROJECT_ID"),
-    "private_key_id": os.getenv("GCP_PRI_KEY_ID"),
-    "private_key": os.getenv("GCP_PRI_KEY").replace('\\n', '\n'),
-    "client_email": os.getenv("GCP_CLIENT_EMAIL"),
-    "client_id": os.getenv("GCP_CLIENT_ID"),
-    "auth_uri": os.getenv("GCP_AUTH_URI"),
-    "token_uri": os.getenv("GCP_TOKEN_URI"),
-    "auth_provider_x509_cert_url": os.getenv("GCP_AUTH_PROVIDER"),
-    "client_x509_cert_url": os.getenv("GCP_CLIENT_CERT_URL"),
-    "universe_domain": os.getenv("GCP_UNIVERSE_DOMAIN")
-}
+# Fabric connection details
+TENANT_ID = os.getenv("FABRIC_TENANT_ID")
+CLIENT_ID = os.getenv("FABRIC_CLIENT_ID")
+CLIENT_SECRET = os.getenv("FABRIC_CLIENT_SECRET")
+RESOURCE_URL = os.getenv("FABRIC_RESOURCE_URL", "https://database.windows.net/.default")
+SQL_ENDPOINT = os.getenv("FABRIC_SQL_ENDPOINT")
+DATABASE = os.getenv("FABRIC_DATABASE")
 
-# Initialize BigQuery client with credentials from environment
-try:
-    credentials = service_account.Credentials.from_service_account_info(credentials_dict)
-    client = bigquery.Client(credentials=credentials, project=credentials_dict["project_id"])
-    logger.info("Successfully initialized BigQuery client with credentials")
-except Exception as e:
-    logger.error(f"Failed to initialize BigQuery client: {str(e)}")
-    logger.warning("Using default client without credentials")
-    client = bigquery.Client()
+def get_fabric_connection():
+    """Create and return a Fabric connection"""
+    try:
+        # Validate required environment variables
+        required_vars = {
+            "FABRIC_TENANT_ID": TENANT_ID,
+            "FABRIC_CLIENT_ID": CLIENT_ID,
+            "FABRIC_CLIENT_SECRET": CLIENT_SECRET,
+            "FABRIC_SQL_ENDPOINT": SQL_ENDPOINT,
+            "FABRIC_DATABASE": DATABASE
+        }
+        
+        missing_vars = [var for var, value in required_vars.items() if not value]
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
-def get_goals_from_bigquery(account_ids: List[str], campaign_objective: str) -> Dict[str, float]:
-    """Get goals from BigQuery in cascading manner"""
+        # Create credential using service principal
+        credential = ClientSecretCredential(
+            tenant_id=TENANT_ID,
+            client_id=CLIENT_ID,
+            client_secret=CLIENT_SECRET
+        )
+        token_object = credential.get_token(RESOURCE_URL)
+
+        # Create connection string
+        connection_string = (
+            f"Driver={{ODBC Driver 18 for SQL Server}};"
+            f"Server={SQL_ENDPOINT},1433;"
+            f"Database={DATABASE};"
+            f"Encrypt=Yes;"
+            f"TrustServerCertificate=No"
+        )
+        params = urllib.parse.quote(connection_string)
+
+        # Prepare access token for ODBC
+        token_as_bytes = bytes(token_object.token, "UTF-8")
+        encoded_bytes = bytes(chain.from_iterable(zip(token_as_bytes, repeat(0))))
+        token_bytes = struct.pack("<i", len(encoded_bytes)) + encoded_bytes
+        attrs_before = {1256: token_bytes}  # SQL_COPT_SS_ACCESS_TOKEN
+
+        # Create connection with token
+        conn = pyodbc.connect(
+            connection_string,
+            attrs_before={1256: token_bytes}  # SQL_COPT_SS_ACCESS_TOKEN
+        )
+        
+        # Create SQLAlchemy engine
+        engine = create_engine(
+            "mssql+pyodbc:///?odbc_connect={0}".format(params),
+            connect_args={'attrs_before': attrs_before}
+        )
+        
+        logger.info("Successfully initialized Fabric connection")
+        return engine
+    except Exception as e:
+        logger.error(f"Failed to initialize Fabric connection: {str(e)}")
+        raise
+
+def map_campaign_objective(objective: str) -> str:
+    """Map campaign objectives from enum values to standardized categories"""
+    # Direct mapping from enum values to standardized categories
+    mapping = {
+        "Brand Awareness": "Awareness",
+        "Traffic": "Traffic",
+        "Engagement": "Engagement",
+        "Lead Generation": "Lead Generation",
+        "Shopping": "Sales/Revenue",
+        "Website Conversion": "Conversions",
+        "Video Views": "Video Views",
+        "App Engagement": "Engagement",
+        "App Install": "App Installs"
+    }
+    
+    # Return mapped value if it exists, otherwise return "Other"
+    return mapping.get(objective, "Other")
+
+def get_goals_from_fabric(account_ids: List[str], campaign_objective: str) -> Dict[str, float]:
+    """Get goals from Fabric in cascading manner"""
+    # Map the campaign objective to standardized category
+    mapped_objective = map_campaign_objective(campaign_objective)
     queries = []
     
     # Add first query if we have both account_ids and campaign_objective
-    if account_ids and campaign_objective:
+    if account_ids and mapped_objective:
         queries.append({
             "query": f"""
-            SELECT max(views) as views,
-                   max(spend) as spend,
-                   max(impressions) as impressions,
-                   max(clicks) as clicks,
-                   max(conversions) as conversions
-            FROM `{BIGQUERY_TABLE}`
-            WHERE account_id in({','.join([f'"{id}"' for id in account_ids])})
-            AND campaign_objective="{campaign_objective}"
+            SELECT MAX(video_views) as views,
+                   MAX(cost) as spend,
+                   MAX(impressions) as impressions,
+                   MAX(clicks) as clicks,
+                   MAX(conversions) as conversions
+            FROM [Gold_WH].[reporting].[merged_ads_final]
+            WHERE account_id IN ({','.join([f"'{id}'" for id in account_ids])})
+            AND campaign_objective = '{mapped_objective}'
             """,
             "description": "Query with account_ids and campaign_objective"
         })
     
     # Add second query if we have campaign_objective
-    if campaign_objective:
+    if mapped_objective:
         queries.append({
             "query": f"""
-            SELECT max(views) as views,
-                   max(spend) as spend,
-                   max(impressions) as impressions,
-                   max(clicks) as clicks,
-                   max(conversions) as conversions
-            FROM `{BIGQUERY_TABLE}`
-            WHERE campaign_objective="{campaign_objective}"
+            SELECT MAX(video_views) as views,
+                   MAX(cost) as spend,
+                   MAX(impressions) as impressions,
+                   MAX(clicks) as clicks,
+                   MAX(conversions) as conversions
+            FROM [Gold_WH].[reporting].[merged_ads_final]
+            WHERE campaign_objective = '{mapped_objective}'
             """,
             "description": "Query with campaign_objective only"
         })
     
     # Always add the default query
     queries.append({
-        "query": f"""
-        SELECT max(views) as views,
-               max(spend) as spend,
-               max(impressions) as impressions,
-               max(clicks) as clicks,
-               max(conversions) as conversions
-        FROM `{BIGQUERY_TABLE}`
+        "query": """
+        SELECT MAX(video_views) as views,
+               MAX(cost) as spend,
+               MAX(impressions) as impressions,
+               MAX(clicks) as clicks,
+               MAX(conversions) as conversions
+        FROM [Gold_WH].[reporting].[merged_ads_final]
         """,
         "description": "Default query without filters"
     })
     
+    engine = get_fabric_connection()
+    
     for query_info in queries:
         try:
             logger.info(f"Executing {query_info['description']}")
-            query_job = client.query(query_info["query"])
-            results = query_job.result()
-            row = next(results, None)
+            df = pd.read_sql(query_info["query"], engine)
             
             # Check if all values are null
-            if row and all(value is None for value in [row.views, row.spend, row.impressions, row.clicks, row.conversions]):
+            if df.empty or df.iloc[0].isnull().all():
                 logger.info(f"All values are null in {query_info['description']}, trying next query")
                 continue
                 
-            if row:
-                goals = {}
-                if row.views is not None: goals["views"] = float(row.views)
-                if row.spend is not None: goals["spend"] = float(row.spend)
-                if row.impressions is not None: goals["impressions"] = float(row.impressions)
-                if row.clicks is not None: goals["clicks"] = float(row.clicks)
-                if row.conversions is not None: goals["conversions"] = float(row.conversions)
-                
-                if goals:
-                    logger.info(f"Successfully retrieved goals using {query_info['description']}")
-                    logger.info(f"Retrieved goals from BigQuery: {goals}")
-                    return goals
-                else:
-                    logger.info(f"No non-null values found in {query_info['description']}, trying next query")
+            goals = {}
+            row = df.iloc[0]
+            if pd.notnull(row.views): goals["views"] = float(row.views)
+            if pd.notnull(row.spend): goals["spend"] = float(row.spend)
+            if pd.notnull(row.impressions): goals["impressions"] = float(row.impressions)
+            if pd.notnull(row.clicks): goals["clicks"] = float(row.clicks)
+            if pd.notnull(row.conversions): goals["conversions"] = float(row.conversions)
+            
+            if goals:
+                logger.info(f"Successfully retrieved goals using {query_info['description']}")
+                logger.info(f"Retrieved goals from Fabric: {goals}")
+                return goals
+            else:
+                logger.info(f"No non-null values found in {query_info['description']}, trying next query")
         except Exception as e:
-            logger.error(f"Error executing BigQuery query ({query_info['description']}): {str(e)}")
+            logger.error(f"Error executing Fabric query ({query_info['description']}): {str(e)}")
             continue
     
-    logger.warning("No valid goals found in BigQuery, skipping goals")
+    logger.warning("No valid goals found in Fabric, skipping goals")
     return {}
 
 class OutputSchema(BaseModel):
@@ -181,10 +246,10 @@ class OutputNode(BaseOutputNode):
         # Log initial output data
         logger.info(f"Initial output data: {output_data.model_dump()}")
         
-        # Get goals from BigQuery
+        # Get goals from Fabric
         account_ids = state.get("account_ids")
         campaign_objective = state.get("campaign_objective")
-        goals = get_goals_from_bigquery(account_ids, campaign_objective)
+        goals = get_goals_from_fabric(account_ids, campaign_objective)
         
         # Make API call to nyx-ai-api
         try:
