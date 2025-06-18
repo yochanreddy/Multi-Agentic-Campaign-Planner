@@ -39,7 +39,9 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Get root path from environment variable
+# Get configuration from environment variables
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", "8000"))
 ROOT_PATH = os.getenv("ROOT_PATH", "/nyx-campaign-agent")
 
 class ProcessingStatus(str, Enum):
@@ -588,8 +590,8 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8000,
+        host=HOST,
+        port=PORT,
         reload=True,
         log_level="info"
     )
