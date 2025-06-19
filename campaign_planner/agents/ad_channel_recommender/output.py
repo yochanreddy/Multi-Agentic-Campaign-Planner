@@ -7,7 +7,7 @@ from campaign_planner.utils import get_module_logger
 from langchain.output_parsers import PydanticOutputParser
 
 logger = get_module_logger()
-ChannelType = Literal["Meta", "Google", "LinkedIn", "TikTok"]
+ChannelType = Literal["Meta", "Google", "LinkedIn"]
 
 
 class OutputSchema(BaseModel):

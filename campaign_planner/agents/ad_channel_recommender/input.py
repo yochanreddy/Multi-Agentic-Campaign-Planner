@@ -6,7 +6,7 @@ from campaign_planner.utils import get_module_logger
 from pydantic import BaseModel, Field
 
 logger = get_module_logger()
-ChannelType = Literal["Meta", "Google", "LinkedIn", "TikTok"]
+ChannelType = Literal["Meta", "Google", "LinkedIn"]
 
 
 class InputSchema(BaseModel):
