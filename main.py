@@ -218,8 +218,8 @@ class CampaignResultResponse(BaseModel):
     interests: List[str] = Field(
         description="Specific hobbies, activities and topics that appeal to the target audience"
     )
-    locations: List[str] = Field(
-        description="Geographic targeting areas including cities, regions or countries"
+    locations: str = Field(
+        description="Primary geographic targeting area (first location from the list)"
     )
     product_description: str = Field(
         description="Detailed explanation of product features, benefits and unique selling points"
@@ -415,14 +415,14 @@ async def get_campaign_plan(request_id: str) -> CampaignResultResponse:
         raise HTTPException(status_code=404, detail="Campaign plan not ready yet")
 
     return CampaignResultResponse(
-        age_group=current_state.values.get("age_group", ""),
+        age_group=current_state.values.get("age_group", "").split(", ")[0] if current_state.values.get("age_group") else "",
         brand_description=current_state.values.get("brand_description", ""),
         brand_name=current_state.values.get("brand_name", ""),
         campaign_objective=current_state.values.get("campaign_objective", ""),
         gender=current_state.values.get("gender", ""),
         industry=current_state.values.get("industry", ""),
         interests=current_state.values.get("interests", []),
-        locations=current_state.values.get("locations", []),
+        locations=current_state.values.get("locations", [])[0] if current_state.values.get("locations") and len(current_state.values.get("locations", [])) > 0 else "",
         product_description=current_state.values.get("product_description", ""),
         product_name=current_state.values.get("product_name", ""),
         psychographic_traits=current_state.values.get("psychographic_traits", []),
