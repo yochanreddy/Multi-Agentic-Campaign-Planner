@@ -1,4 +1,0 @@
-crewai
-crewai_tools
-pydantic
-python-dotenv

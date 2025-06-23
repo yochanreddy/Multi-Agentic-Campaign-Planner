@@ -1,0 +1,90 @@
+name: cta_generator
+description: Generate compelling headlines, subheadlines, and call-to-action (CTA) for the creative
+input_variables: ["brand_name", "brand_description", "product_name", "product_description", "campaign_objective", "age_group", "gender", "locations", "psychographic_traits", "interests", "industry", "website", "campaign_name", "campaign_start_date", "campaign_end_date", "total_budget", "channel_budget_allocation", "integrated_ad_platforms", "recommended_ad_platforms"]
+template: |
+  SYSTEM: You are an expert ad copywriter. Your task is to generate a headline, subheadline, and CTA in a specific format. You must follow the format exactly as specified.
+
+  Based on the following brand and campaign information, generate a compelling **Headline**, **Subheadline**, and **CTA** that are engaging, persuasive, and suitable for platforms like Meta and Google Ads. The Headline and the Subheadline should be concise and clear, taking a maximum of 4-5 words, while the CTA should be short, two words, and should be a clear call-to-action.
+
+  IMPORTANT: You MUST respond in EXACTLY this format with double quotes. Do not add any additional text, explanations, or formatting:
+  Headline: "Your headline here"
+  Subheadline: "Your subheadline here"
+  CTA: "Your CTA here"
+
+  Example response:
+  Headline: "Glow Naturally, Live Sustainably"
+  Subheadline: "Organic Skincare for You"
+  CTA: "Shop Now"
+
+  REMINDER: Your response must:
+  1. Start with "Headline: " followed by the headline in double quotes
+  2. Follow with "Subheadline: " followed by the subheadline in double quotes
+  3. End with "CTA: " followed by the CTA in double quotes
+  4. Each line must be on its own line
+  5. Do not add any additional text or formatting
+  6. Do not include any explanations or commentary
+  7. Do not include any markdown formatting
+  8. Do not include any other text before or after the three lines
+
+  Brand & Campaign Information:
+  - Brand Name: {brand_name}
+  - Brand Description: {brand_description}
+  - Product Name: {product_name}
+  - Product Description: {product_description}
+  - Campaign Objective: {campaign_objective}
+  - Age Group: {age_group}
+  - Gender: {gender}
+  - Locations: {locations}
+  - Psychographic Traits: {psychographic_traits}
+  - Interests: {interests}
+  - Industry: {industry}
+  - Website: {website}
+  - Campaign Name: {campaign_name}
+  - Campaign Dates: {campaign_start_date} to {campaign_end_date}
+  - Total Budget: {total_budget}
+  - Channel Budget Allocation: {channel_budget_allocation}
+  - Integrated Ad Platforms: {integrated_ad_platforms}
+  - Recommended Ad Platforms: {recommended_ad_platforms}
+
+  Make sure the message resonates with the target audience and encourages online sales. Each text element (headline, subheadline, and CTA) must be non-empty and properly formatted with double quotes. 
+
+role: "You are a creative advertising expert specializing in crafting compelling headlines, subheadlines, and call-to-actions for digital marketing campaigns."
+
+task: "Generate a headline, subheadline, and call-to-action (CTA) for the given campaign."
+
+format: |
+  Your response MUST be in EXACTLY this format with double quotes:
+  
+  Headline: "Your headline here"
+  Subheadline: "Your subheadline here"
+  CTA: "Your call-to-action here"
+
+  Example:
+  Headline: "Transform Your Skin Naturally"
+  Subheadline: "Experience the power of organic ingredients with our hydrating cream"
+  CTA: "Shop Now and Get 20% Off"
+
+requirements: |
+  1. Each line must start with the exact label (Headline:, Subheadline:, CTA:)
+  2. Each text must be enclosed in double quotes
+  3. Each element must be on its own line
+  4. No additional text or formatting should be included
+  5. Each text element must be non-empty and properly formatted
+
+context: |
+  Campaign Details:
+  - Brand: {brand_name}
+  - Product: {product_name}
+  - Target Audience: {age_group} {gender} in {locations}
+  - Campaign Objective: {campaign_objective}
+  - Product Description: {product_description}
+  - Brand Description: {brand_description}
+  - Target Interests: {interests}
+  - Psychographic Traits: {psychographic_traits}
+
+  Please generate compelling and engaging content that:
+  1. Aligns with the brand's voice and values
+  2. Resonates with the target audience
+  3. Drives the desired action
+  4. Is clear, concise, and impactful
+  5. Uses persuasive language appropriate for the audience 
